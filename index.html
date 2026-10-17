@@ -383,16 +383,40 @@
       }
     }
 
+    /* Kontener wydruku jest poza ekranem, ale ma pełny układ, żeby alphaTab mógł go wyrenderować */
+    #printArea {
+      position: absolute;
+      left: -10000px;
+      top: 0;
+      width: 190mm;
+      visibility: hidden;
+    }
+
+    #printArea .at-surface {
+      width: auto !important;
+      height: auto !important;
+    }
+
+    #printArea .at-surface > div {
+      position: relative !important;
+      left: auto !important;
+      top: auto !important;
+      break-inside: avoid;
+    }
+
     @media print {
       body {
         height: auto;
         overflow: visible;
+        background: #fff;
       }
 
       .topbar,
       .sidebar,
       .placeholder,
-      .message {
+      .message,
+      .playbar,
+      #alphaTab {
         display: none !important;
       }
 
@@ -401,9 +425,12 @@
         overflow: visible;
       }
 
-      #alphaTab {
-        box-shadow: none;
-        padding: 0;
+      #printArea {
+        position: static;
+        left: auto;
+        top: auto;
+        visibility: visible;
+        width: auto;
       }
     }
   </style>
@@ -451,6 +478,7 @@
         <small>Obsługiwane formaty: .gp3, .gp4, .gp5, .gpx, .gp (GP7)</small>
       </div>
       <div id="alphaTab" hidden></div>
+      <div id="printArea" aria-hidden="true"></div>
     </main>
   </div>
 
@@ -493,6 +521,7 @@
       message: document.getElementById('message'),
       placeholder: document.getElementById('placeholder'),
       score: document.getElementById('alphaTab'),
+      printArea: document.getElementById('printArea'),
       viewer: document.getElementById('viewer'),
       playBtn: document.getElementById('playBtn'),
       stopBtn: document.getElementById('stopBtn'),
@@ -1075,14 +1104,37 @@
       if (event.key === 'ArrowRight') selectSong(currentIndex + 1);
     });
 
-    els.printBtn.addEventListener('click', () => {
+    // Wydruk renderuje partyturę w ukrytym kontenerze tej samej strony (bez popupu), w pełnej
+    // szerokości strony A4, i dopiero po zakończeniu renderowania otwiera okno drukowania
+    let printApi = null;
+
+    function printScore() {
+      if (!api.score || !api.tracks.length) return;
+
+      if (printApi) printApi.destroy();
+      els.printArea.innerHTML = '';
+
+      printApi = new alphaTab.AlphaTabApi(els.printArea, {
+        display: { layoutMode: 'page', scale: 0.8, stretchForce: 0.8 },
+        core: { enableLazyLoading: false },
+        player: { enablePlayer: false, enableCursor: false, enableUserInteraction: false },
+      });
+
+      let printed = false;
+      printApi.postRenderFinished.on(() => {
+        if (printed) return;
+        printed = true;
+        window.print();
+      });
+
       try {
-        // Otwiera okno podglądu wydruku z aktualnie wyświetlonymi ścieżkami
-        api.print();
+        printApi.renderTracks(api.tracks);
       } catch (error) {
-        showMessage('Nie udało się otworzyć okna wydruku. Zezwól tej stronie na wyskakujące okna i spróbuj ponownie.');
+        showMessage('Nie udało się przygotować wydruku.');
       }
-    });
+    }
+
+    els.printBtn.addEventListener('click', printScore);
 
     document.addEventListener('dragover', event => event.preventDefault());
     document.addEventListener('drop', async event => {
