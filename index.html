@@ -1,0 +1,1101 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GP Viewer</title>
+  <style>
+    :root {
+      --bg: #f2f2f0;
+      --panel: #ffffff;
+      --text: #1d1d1f;
+      --muted: #6b6b70;
+      --accent: #2b6cb0;
+      --border: #d8d8dc;
+      --play: #e8590c;
+    }
+
+    [hidden] { display: none !important; }
+
+    * { box-sizing: border-box; }
+
+    body {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      margin: 0;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      flex-shrink: 0;
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px 16px;
+      padding: 12px 20px;
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .title h1 {
+      margin: 0;
+      font-size: 18px;
+    }
+
+    #songInfo {
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    button {
+      font: inherit;
+      padding: 8px 14px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--panel);
+      color: var(--text);
+      cursor: pointer;
+    }
+
+    button.primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .modebar-row {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      padding: 8px 12px;
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .modebar {
+      display: inline-flex;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .mode {
+      padding: 6px 14px;
+      border: 0;
+      border-radius: 0;
+      background: var(--panel);
+    }
+
+    .mode + .mode {
+      border-left: 1px solid var(--border);
+    }
+
+    .mode[aria-pressed="true"] {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .layout {
+      display: flex;
+      flex: 1;
+      min-height: 0;
+    }
+
+    .sidebar {
+      width: 300px;
+      flex-shrink: 0;
+      padding: 16px 12px;
+      overflow-y: auto;
+      background: var(--panel);
+      border-right: 1px solid var(--border);
+    }
+
+    .sidebar h2 {
+      margin: 0 4px 8px;
+      font-size: 12px;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .search {
+      width: 100%;
+      margin: 0 0 4px;
+      padding: 7px 10px;
+      font: inherit;
+      font-size: 14px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+    }
+
+    .search-info {
+      min-height: 1em;
+      margin: 0 4px 8px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .tree ul {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    .tree .children {
+      padding-left: 14px;
+    }
+
+    .tree .row {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+    }
+
+    .tree .caret {
+      flex-shrink: 0;
+      width: 22px;
+      height: 28px;
+      padding: 0;
+      border: 0;
+      background: none;
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .tree .label {
+      flex: 1;
+      min-width: 0;
+      padding: 4px 6px;
+      border: 0;
+      border-radius: 4px;
+      background: none;
+      color: var(--text);
+      font-size: 14px;
+      text-align: left;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .tree .label:hover {
+      background: var(--bg);
+    }
+
+    .tree .dir > .row .label {
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .tree .file.current > .row .label {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .tree .tracks {
+      padding: 2px 0 6px 24px;
+    }
+
+    .tree .track label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+      padding: 3px 4px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+
+    .tree .track label span {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .tree .note {
+      padding: 3px 4px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    #viewer {
+      flex: 1;
+      min-width: 0;
+      padding: 24px;
+      overflow: auto;
+    }
+
+    .placeholder {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 60vh;
+      border: 2px dashed var(--border);
+      border-radius: 12px;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    .placeholder p {
+      margin: 0;
+      font-size: 16px;
+    }
+
+    .placeholder small {
+      font-size: 13px;
+    }
+
+    #alphaTab {
+      padding: 16px;
+      background: #fff;
+      border-radius: 4px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+    }
+
+    .message {
+      flex-shrink: 0;
+      margin: 16px 24px 0;
+      padding: 10px 14px;
+      border-radius: 6px;
+      background: #fdecea;
+      color: #8a1f11;
+      font-size: 14px;
+    }
+
+    /* Uderzenie, które aktualnie brzmi, podświetlamy kolorem akcentu */
+    #alphaTab .at-highlight,
+    #alphaTab .at-highlight * {
+      fill: var(--play);
+    }
+
+    .playbar {
+      flex-shrink: 0;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px 14px;
+      padding: 8px 16px;
+      background: var(--panel);
+      border-top: 1px solid var(--border);
+    }
+
+    .playbar .transport {
+      display: flex;
+      gap: 6px;
+    }
+
+    .playbar .icon {
+      min-width: 42px;
+      padding: 6px 10px;
+    }
+
+    .playbar .time {
+      font-size: 14px;
+      color: var(--muted);
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
+    .playbar input[type="range"] {
+      flex: 1;
+      min-width: 120px;
+    }
+
+    .playbar label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 14px;
+      color: var(--muted);
+    }
+
+    .playbar .status {
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .playbar .now-playing {
+      min-width: 180px;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--play);
+    }
+
+    @media (max-width: 720px) {
+      body {
+        height: auto;
+        overflow: visible;
+      }
+
+      /* Na telefonie pasek zakładek zostaje przyklejony do góry, pasek narzędzi przewija się */
+      .topbar {
+        display: contents;
+      }
+
+      .layout {
+        flex: none;
+        flex-direction: column;
+      }
+
+      .sidebar {
+        width: auto;
+        max-height: 40vh;
+        border-right: 0;
+        border-bottom: 1px solid var(--border);
+      }
+
+      #viewer {
+        padding: 16px;
+        overflow: visible;
+      }
+
+      .message {
+        margin: 16px 16px 0;
+      }
+
+      .playbar {
+        position: sticky;
+        bottom: 0;
+        z-index: 10;
+      }
+    }
+
+    @media print {
+      body {
+        height: auto;
+        overflow: visible;
+      }
+
+      .topbar,
+      .sidebar,
+      .placeholder,
+      .message {
+        display: none !important;
+      }
+
+      #viewer {
+        padding: 0;
+        overflow: visible;
+      }
+
+      #alphaTab {
+        box-shadow: none;
+        padding: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <header class="toolbar">
+      <div class="title">
+        <h1>GP Viewer</h1>
+        <div id="songInfo">Nie wczytano pliku</div>
+      </div>
+      <div class="actions">
+        <input type="file" id="fileInput" accept=".gp,.gp3,.gp4,.gp5,.gpx" multiple hidden>
+        <input type="file" id="folderInput" webkitdirectory hidden>
+        <button type="button" id="openFileBtn">Otwórz pliki…</button>
+        <button type="button" id="openFolderBtn">Otwórz folder…</button>
+        <button type="button" id="printBtn" class="primary" disabled>Drukuj</button>
+      </div>
+    </header>
+
+    <div class="modebar-row">
+      <div class="modebar" role="group" aria-label="Tryb wyświetlania">
+        <button type="button" class="mode" data-mode="score" aria-pressed="false">Nuty</button>
+        <button type="button" class="mode" data-mode="tab" aria-pressed="false">Tabulatura</button>
+        <button type="button" class="mode" data-mode="both" aria-pressed="true">Nuty + tab</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="message" class="message" hidden></div>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <h2>Pliki i ścieżki</h2>
+      <input type="search" id="searchInput" class="search" placeholder="Szukaj utworu…" aria-label="Szukaj utworu" disabled>
+      <p id="searchInfo" class="search-info"></p>
+      <div id="tree" class="tree">
+        <p class="note">Brak wczytanych plików</p>
+      </div>
+    </aside>
+
+    <main id="viewer">
+      <div id="placeholder" class="placeholder">
+        <p>Przeciągnij tutaj pliki Guitar Pro albo cały folder<br>lub kliknij „Otwórz pliki…” albo „Otwórz folder…”</p>
+        <small>Obsługiwane formaty: .gp3, .gp4, .gp5, .gpx, .gp (GP7)</small>
+      </div>
+      <div id="alphaTab" hidden></div>
+    </main>
+  </div>
+
+  <footer class="playbar">
+    <div class="transport">
+      <button type="button" id="stopBtn" class="icon" aria-label="Zatrzymaj">■</button>
+      <button type="button" id="playBtn" class="primary icon" aria-label="Odtwórz" disabled>▶</button>
+    </div>
+    <span id="timeInfo" class="time">0:00 / 0:00</span>
+    <input type="range" id="seekBar" min="0" max="1000" value="0" aria-label="Pozycja w utworze" disabled>
+    <span id="nowPlaying" class="now-playing" aria-live="polite">—</span>
+    <label>Tempo
+      <select id="speedSelect">
+        <option value="0.5">50%</option>
+        <option value="0.75">75%</option>
+        <option value="1" selected>100%</option>
+        <option value="1.25">125%</option>
+      </select>
+    </label>
+    <span id="playStatus" class="status">Ładowanie brzmień…</span>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/@coderline/alphatab@1.8.4/dist/alphaTab.min.js"></script>
+  <script>
+    const GP_EXTENSIONS = ['.gp', '.gp3', '.gp4', '.gp5', '.gpx'];
+    // Brzmienia do odtwarzania (SoundFont z tej samej wersji biblioteki co alphaTab)
+    const SOUNDFONT_URL = 'https://cdn.jsdelivr.net/npm/@coderline/alphatab@1.8.4/dist/soundfont/sonivox.sf3';
+
+    const els = {
+      fileInput: document.getElementById('fileInput'),
+      folderInput: document.getElementById('folderInput'),
+      openFileBtn: document.getElementById('openFileBtn'),
+      openFolderBtn: document.getElementById('openFolderBtn'),
+      printBtn: document.getElementById('printBtn'),
+      songInfo: document.getElementById('songInfo'),
+      modes: document.querySelectorAll('.mode'),
+      tree: document.getElementById('tree'),
+      searchInput: document.getElementById('searchInput'),
+      searchInfo: document.getElementById('searchInfo'),
+      message: document.getElementById('message'),
+      placeholder: document.getElementById('placeholder'),
+      score: document.getElementById('alphaTab'),
+      viewer: document.getElementById('viewer'),
+      playBtn: document.getElementById('playBtn'),
+      stopBtn: document.getElementById('stopBtn'),
+      seekBar: document.getElementById('seekBar'),
+      timeInfo: document.getElementById('timeInfo'),
+      speedSelect: document.getElementById('speedSelect'),
+      playStatus: document.getElementById('playStatus'),
+      nowPlaying: document.getElementById('nowPlaying'),
+    };
+
+    const api = new alphaTab.AlphaTabApi(els.score, {
+      display: { layoutMode: 'page' },
+      player: {
+        enablePlayer: true,
+        playerMode: 'EnabledSynthesizer',
+        soundFont: SOUNDFONT_URL,
+        enableCursor: true,
+        enableUserInteraction: true,
+        enableElementHighlighting: true,
+        // Na desktopie przewija się panel podglądu, na telefonie cała strona
+        scrollElement: window.innerWidth > 720 ? '#viewer' : 'html,body',
+      },
+    });
+
+    // Lista plików, drzewo katalogów i stan widoku:
+    // currentIndex – plik wybrany przez użytkownika, loadedIndex – plik faktycznie wyświetlony,
+    // loadToken – licznik wczytań, żeby wolniejsze wczytanie nie nadpisało późniejszego wyboru
+    let playlist = [];
+    let tree = null;
+    let expandedDirs = new Set();
+    let expandedSongs = new Set();
+    let currentIndex = -1;
+    let loadedIndex = -1;
+    let loadToken = 0;
+    let displayMode = 'both';
+    let seeking = false;
+    let duration = 0;
+    let searchQuery = '';
+
+    function showMessage(text) {
+      els.message.textContent = text;
+      els.message.hidden = false;
+    }
+
+    function clearMessage() {
+      els.message.hidden = true;
+      els.message.textContent = '';
+    }
+
+    function isHidden(name) {
+      return name.startsWith('.') || name === '__MACOSX';
+    }
+
+    function isGpFile(name) {
+      const lower = name.toLowerCase();
+      return GP_EXTENSIONS.some(ext => lower.endsWith(ext));
+    }
+
+    function isGpPath(path) {
+      const parts = path.split('/');
+      return !parts.some(isHidden) && isGpFile(parts[parts.length - 1]);
+    }
+
+    function trackNamesOf(score) {
+      return score.tracks.map((track, index) => track.name || `Ścieżka ${index + 1}`);
+    }
+
+    // Zbiera pliki GP z przeciągniętego pliku lub folderu (także z podfolderów)
+    async function collectFiles(entry, parentPath = '') {
+      const path = parentPath + entry.name;
+
+      if (isHidden(entry.name)) return [];
+
+      if (entry.isFile) {
+        if (!isGpFile(entry.name)) return [];
+        const file = await new Promise((resolve, reject) => entry.file(resolve, reject));
+        return [{ file, path }];
+      }
+
+      const children = await readAllEntries(entry.createReader());
+      const nested = await Promise.all(children.map(child => collectFiles(child, `${path}/`)));
+      return nested.flat();
+    }
+
+    // readEntries zwraca wpisy porcjami, więc czytamy aż do pustej odpowiedzi
+    async function readAllEntries(reader) {
+      const entries = [];
+      let batch;
+
+      do {
+        batch = await new Promise((resolve, reject) => reader.readEntries(resolve, reject));
+        entries.push(...batch);
+      } while (batch.length > 0);
+
+      return entries;
+    }
+
+    // Buduje drzewo folderów i plików; wszystkie foldery są domyślnie rozwinięte
+    function buildTree(songs) {
+      const root = { type: 'dir', name: '', path: '', children: new Map() };
+
+      songs.forEach((song, index) => {
+        const parts = song.path.split('/');
+        let dir = root;
+
+        parts.slice(0, -1).forEach((name, depth) => {
+          if (!dir.children.has(name)) {
+            const path = parts.slice(0, depth + 1).join('/');
+            dir.children.set(name, { type: 'dir', name, path, children: new Map() });
+            expandedDirs.add(path);
+          }
+          dir = dir.children.get(name);
+        });
+
+        const fileName = parts[parts.length - 1];
+        dir.children.set(fileName, { type: 'file', name: fileName, index });
+      });
+
+      return root;
+    }
+
+    function setPlaylist(found) {
+      const files = found
+        .filter(item => isGpPath(item.path))
+        .sort((a, b) => a.path.localeCompare(b.path, 'pl', { numeric: true }));
+
+      if (files.length === 0) {
+        showMessage('Nie znaleziono plików Guitar Pro (.gp3, .gp4, .gp5, .gpx, .gp).');
+        return;
+      }
+
+      playlist = files.map(item => ({
+        ...item,
+        name: item.path.split('/').pop().replace(/\.[^.]+$/, ''),
+        selected: [0],
+        trackNames: null,
+        trackError: null,
+        loadingTracks: false,
+      }));
+
+      expandedDirs = new Set();
+      expandedSongs = new Set();
+      currentIndex = -1;
+      loadedIndex = -1;
+      tree = buildTree(playlist);
+      els.searchInput.disabled = false;
+
+      selectSong(0);
+    }
+
+    // Wyszukiwanie ignoruje wielkość liter i polskie znaki diakrytyczne
+    function normalizeText(text) {
+      // Litera „ł” nie rozkłada się przy NFD, więc zamieniamy ją osobno
+      return text.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/ł/gi, 'l').toLowerCase();
+    }
+
+    // Szukamy w pełnej ścieżce, więc działa też nazwa folderu
+    function matchesSearch(song) {
+      return !searchQuery || normalizeText(song.path).includes(searchQuery);
+    }
+
+    function hasMatch(node) {
+      if (node.type === 'file') return matchesSearch(playlist[node.index]);
+      return [...node.children.values()].some(hasMatch);
+    }
+
+    function updateSearchInfo() {
+      if (!searchQuery) {
+        els.searchInfo.textContent = '';
+        return;
+      }
+
+      const count = playlist.filter(matchesSearch).length;
+      els.searchInfo.textContent = `Znaleziono: ${count}`;
+    }
+
+    function renderTree() {
+      els.tree.innerHTML = '';
+
+      if (!tree) {
+        const note = document.createElement('p');
+        note.className = 'note';
+        note.textContent = 'Brak wczytanych plików';
+        els.tree.append(note);
+        return;
+      }
+
+      if (searchQuery && !hasMatch(tree)) {
+        const note = document.createElement('p');
+        note.className = 'note';
+        note.textContent = `Brak wyników dla „${els.searchInput.value.trim()}”`;
+        els.tree.append(note);
+      } else {
+        els.tree.append(renderChildren(tree, false));
+      }
+
+      updateSearchInfo();
+
+      // Przy przełączaniu klawiaturą pokazujemy aktualny plik w drzewie (tylko na desktopie)
+      if (window.innerWidth > 720) {
+        const current = els.tree.querySelector('.file.current');
+        if (current) current.scrollIntoView({ block: 'nearest' });
+      }
+    }
+
+    function compareNodes(a, b) {
+      if (a.type !== b.type) return a.type === 'dir' ? -1 : 1;
+      return a.name.localeCompare(b.name, 'pl', { numeric: true });
+    }
+
+    function renderChildren(dir, nested) {
+      const ul = document.createElement('ul');
+      if (nested) ul.className = 'children';
+
+      [...dir.children.values()]
+        .filter(node => !searchQuery || hasMatch(node))
+        .sort(compareNodes)
+        .forEach(node => ul.append(node.type === 'dir' ? renderDir(node) : renderFile(node)));
+
+      return ul;
+    }
+
+    function renderDir(dir) {
+      const li = document.createElement('li');
+      // Podczas wyszukiwania foldery z wynikami są zawsze rozwinięte
+      const expanded = searchQuery ? true : expandedDirs.has(dir.path);
+      const toggle = () => toggleDir(dir.path);
+
+      li.className = 'dir';
+      li.append(createRow(expanded, dir.name, dir.path, toggle, toggle));
+      if (expanded) li.append(renderChildren(dir, true));
+
+      return li;
+    }
+
+    function renderFile(node) {
+      const li = document.createElement('li');
+      const song = playlist[node.index];
+      const expanded = expandedSongs.has(node.index);
+
+      li.className = node.index === currentIndex ? 'file current' : 'file';
+      li.append(createRow(
+        expanded,
+        node.name,
+        song.path,
+        () => toggleSong(node.index),
+        () => selectSong(node.index),
+      ));
+      if (expanded) li.append(renderTrackList(node.index));
+
+      return li;
+    }
+
+    function createRow(expanded, label, title, onCaret, onLabel) {
+      const row = document.createElement('div');
+      const caret = document.createElement('button');
+      const button = document.createElement('button');
+
+      row.className = 'row';
+
+      caret.type = 'button';
+      caret.className = 'caret';
+      caret.textContent = expanded ? '▾' : '▸';
+      caret.setAttribute('aria-expanded', String(expanded));
+      caret.addEventListener('click', onCaret);
+
+      button.type = 'button';
+      button.className = 'label';
+      button.textContent = label;
+      button.title = title;
+      button.addEventListener('click', onLabel);
+
+      row.append(caret, button);
+      return row;
+    }
+
+    function noteItem(text) {
+      const li = document.createElement('li');
+      li.className = 'note';
+      li.textContent = text;
+      return li;
+    }
+
+    function renderTrackList(index) {
+      const song = playlist[index];
+      const ul = document.createElement('ul');
+      ul.className = 'tracks';
+
+      if (song.trackError) {
+        ul.append(noteItem(`Nie udało się odczytać ścieżek: ${song.trackError}`));
+        return ul;
+      }
+
+      if (!song.trackNames) {
+        ul.append(noteItem('Wczytywanie ścieżek…'));
+        return ul;
+      }
+
+      song.trackNames.forEach((name, trackIndex) => {
+        const li = document.createElement('li');
+        const label = document.createElement('label');
+        const checkbox = document.createElement('input');
+        const text = document.createElement('span');
+
+        li.className = 'track';
+        checkbox.type = 'checkbox';
+        checkbox.checked = song.selected.includes(trackIndex);
+        checkbox.addEventListener('change', () => toggleTrack(index, trackIndex, checkbox));
+        text.textContent = name;
+
+        label.append(checkbox, text);
+        li.append(label);
+        ul.append(li);
+      });
+
+      return ul;
+    }
+
+    function toggleDir(path) {
+      if (expandedDirs.has(path)) expandedDirs.delete(path);
+      else expandedDirs.add(path);
+
+      renderTree();
+    }
+
+    async function toggleSong(index) {
+      if (expandedSongs.has(index)) {
+        expandedSongs.delete(index);
+        renderTree();
+        return;
+      }
+
+      expandedSongs.add(index);
+      renderTree();
+      await loadTrackNames(index);
+    }
+
+    // Odczytuje nazwy ścieżek bez renderowania nut (dla plików, które nie są wyświetlone)
+    async function loadTrackNames(index) {
+      const song = playlist[index];
+      if (song.trackNames || song.trackError || song.loadingTracks) return;
+
+      song.loadingTracks = true;
+      try {
+        const data = new Uint8Array(await song.file.arrayBuffer());
+        song.trackNames = trackNamesOf(alphaTab.importer.ScoreLoader.loadScoreFromBytes(data));
+      } catch (error) {
+        song.trackError = error.message;
+      } finally {
+        song.loadingTracks = false;
+        renderTree();
+      }
+    }
+
+    function toggleTrack(index, trackIndex, checkbox) {
+      const song = playlist[index];
+      const selected = new Set(song.selected);
+
+      if (checkbox.checked) selected.add(trackIndex);
+      else selected.delete(trackIndex);
+
+      // Musi zostać przynajmniej jedna ścieżka, inaczej nie będzie czego pokazać ani wydrukować
+      if (selected.size === 0) {
+        checkbox.checked = true;
+        return;
+      }
+
+      song.selected = [...selected].sort((a, b) => a - b);
+
+      if (index === loadedIndex) {
+        api.renderTracks(song.selected.map(i => api.score.tracks[i]));
+        syncPlayback();
+      } else {
+        selectSong(index);
+      }
+    }
+
+    async function selectSong(index) {
+      if (index < 0 || index >= playlist.length) return;
+      if (index === currentIndex && index === loadedIndex) return;
+
+      const song = playlist[index];
+      const token = ++loadToken;
+
+      currentIndex = index;
+      expandedSongs.add(index);
+      renderTree();
+      clearMessage();
+      els.songInfo.textContent = song.name;
+
+      try {
+        const data = await song.file.arrayBuffer();
+        if (token === loadToken) api.load(data, [...song.selected]);
+      } catch (error) {
+        if (token === loadToken) showMessage(`Nie udało się wczytać pliku „${song.name}”: ${error.message}`);
+      }
+    }
+
+    api.scoreLoaded.on(score => {
+      const song = playlist[currentIndex];
+      const name = [score.artist, score.title].filter(Boolean).join(' – ');
+
+      loadedIndex = currentIndex;
+      if (song) {
+        song.trackNames = trackNamesOf(score);
+        song.trackError = null;
+      }
+
+      applyDisplayMode(score, false);
+      syncPlayback();
+      els.songInfo.textContent = name || 'Bez tytułu';
+      els.placeholder.hidden = true;
+      els.score.hidden = false;
+      els.printBtn.disabled = false;
+      clearMessage();
+      renderTree();
+    });
+
+    api.error.on(error => {
+      const song = playlist[currentIndex];
+
+      loadedIndex = -1;
+      if (song && !song.trackNames) song.trackError = error.message;
+
+      showMessage(`Nie udało się wczytać pliku „${song ? song.name : ''}”: ${error.message}`);
+      renderTree();
+    });
+
+    function formatTime(ms) {
+      const seconds = Math.floor(ms / 1000);
+      return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
+    }
+
+    // Odtwarza tylko ścieżki widoczne w podglądzie: pozostałe wyciszamy
+    function syncPlayback() {
+      const song = playlist[loadedIndex];
+      const ready = api.isReadyForPlayback;
+
+      els.playBtn.disabled = !ready;
+      els.seekBar.disabled = !ready;
+
+      if (!ready || !song || !api.score) return;
+
+      api.score.tracks.forEach((track, index) => {
+        api.changeTrackMute([track], !song.selected.includes(index));
+      });
+    }
+
+    // Po gotowości syntezatora (MIDI i brzmienia załadowane) wyciszamy ścieżki spoza podglądu
+    api.playerReady.on(() => {
+      els.playStatus.textContent = '';
+      syncPlayback();
+    });
+    api.soundFontLoad.on(progress => {
+      if (progress.total > 0) {
+        els.playStatus.textContent = `Ładowanie brzmień… ${Math.round(progress.loaded / progress.total * 100)}%`;
+      }
+    });
+
+    api.playerStateChanged.on(args => {
+      const playing = args.state === alphaTab.synth.PlayerState.Playing;
+      els.playBtn.textContent = playing ? '❚❚' : '▶';
+      els.playBtn.setAttribute('aria-label', playing ? 'Pauza' : 'Odtwórz');
+      if (args.stopped) showNowPlaying([]);
+    });
+
+    // Nazwy dźwięków liczymy z numeru MIDI (60 = C4)
+    const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+
+    function noteName(midi) {
+      return `${NOTE_NAMES[midi % 12]}${Math.floor(midi / 12) - 1}`;
+    }
+
+    // Pokazuje, które dźwięki brzmią teraz w widocznych ścieżkach
+    function showNowPlaying(beats) {
+      const parts = [];
+
+      beats.forEach(beat => {
+        const track = beat.voice.bar.staff.track;
+        if (!api.tracks.includes(track) || beat.isRest) return;
+
+        if (track.isPercussion) {
+          parts.push(`${track.name}: perkusja`);
+          return;
+        }
+
+        beat.notes.forEach(note => {
+          const fret = note.fret === 0 ? 'pusta' : `pr. ${note.fret}`;
+          const label = `${noteName(note.realValue)} (${fret})`;
+          parts.push(api.tracks.length > 1 ? `${track.name}: ${label}` : label);
+        });
+      });
+
+      els.nowPlaying.textContent = parts.length ? parts.join(' · ') : '—';
+    }
+
+    api.activeBeatsChanged.on(args => showNowPlaying(args.activeBeats));
+
+    api.playerPositionChanged.on(args => {
+      duration = args.endTime;
+      if (!seeking) els.seekBar.value = args.endTime ? Math.round(args.currentTime / args.endTime * 1000) : 0;
+      els.timeInfo.textContent = `${formatTime(args.currentTime)} / ${formatTime(args.endTime)}`;
+    });
+
+    els.playBtn.addEventListener('click', () => api.playPause());
+    els.stopBtn.addEventListener('click', () => api.stop());
+    els.speedSelect.addEventListener('change', () => {
+      api.playbackSpeed = Number(els.speedSelect.value);
+    });
+    els.seekBar.addEventListener('input', () => {
+      seeking = true;
+    });
+    els.seekBar.addEventListener('change', () => {
+      api.timePosition = (els.seekBar.value / 1000) * duration;
+      seeking = false;
+    });
+
+    function handleInput(input) {
+      if (input.files.length === 0) return;
+
+      setPlaylist([...input.files].map(file => ({
+        file,
+        path: file.webkitRelativePath || file.name,
+      })));
+      input.value = '';
+    }
+
+    els.searchInput.addEventListener('input', () => {
+      searchQuery = normalizeText(els.searchInput.value.trim());
+      renderTree();
+    });
+
+    els.searchInput.addEventListener('keydown', event => {
+      if (event.key === 'Escape') {
+        els.searchInput.value = '';
+        searchQuery = '';
+        renderTree();
+      }
+
+      // Enter otwiera pierwszy pasujący plik
+      if (event.key === 'Enter' && searchQuery) {
+        const first = playlist.findIndex(song => matchesSearch(song));
+        if (first >= 0) selectSong(first);
+      }
+    });
+
+    els.openFileBtn.addEventListener('click', () => els.fileInput.click());
+    els.openFolderBtn.addEventListener('click', () => els.folderInput.click());
+    els.fileInput.addEventListener('change', () => handleInput(els.fileInput));
+    els.folderInput.addEventListener('change', () => handleInput(els.folderInput));
+
+    els.modes.forEach(button => {
+      button.addEventListener('click', () => setDisplayMode(button.dataset.mode));
+    });
+
+    function setDisplayMode(mode) {
+      displayMode = mode;
+      els.modes.forEach(button => {
+        button.setAttribute('aria-pressed', String(button.dataset.mode === mode));
+      });
+      applyDisplayMode(api.score, true);
+    }
+
+    // Nuty i tabulatura to ustawienia każdej pięciolinii w modelu utworu, więc zmieniamy je tutaj
+    function applyDisplayMode(score, render) {
+      if (!score) return;
+
+      score.tracks.forEach(track => track.staves.forEach(staff => {
+        // Perkusja nie ma tabulatury, więc zawsze zostaje na nutach
+        staff.showStandardNotation = displayMode !== 'tab' || !staff.isStringed;
+        staff.showTablature = displayMode !== 'score' && staff.isStringed;
+      }));
+
+      if (render) api.render();
+    }
+
+    document.addEventListener('keydown', event => {
+      if (event.target.matches?.('input, select, textarea')) return;
+      if (event.key === 'ArrowLeft') selectSong(currentIndex - 1);
+      if (event.key === 'ArrowRight') selectSong(currentIndex + 1);
+    });
+
+    els.printBtn.addEventListener('click', () => {
+      try {
+        // Otwiera okno podglądu wydruku z aktualnie wyświetlonymi ścieżkami
+        api.print();
+      } catch (error) {
+        showMessage('Nie udało się otworzyć okna wydruku. Zezwól tej stronie na wyskakujące okna i spróbuj ponownie.');
+      }
+    });
+
+    document.addEventListener('dragover', event => event.preventDefault());
+    document.addEventListener('drop', async event => {
+      event.preventDefault();
+
+      // Wpisy trzeba pobrać od razu, bo przeglądarka unieważnia je po zakończeniu zdarzenia
+      const entries = [...event.dataTransfer.items]
+        .map(item => item.webkitGetAsEntry())
+        .filter(Boolean);
+      const found = (await Promise.all(entries.map(entry => collectFiles(entry)))).flat();
+
+      setPlaylist(found);
+    });
+  </script>
+</body>
+</html>
