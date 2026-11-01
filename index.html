@@ -4,20 +4,101 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>GP Viewer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <script>
+    // Przywracamy zapamiętany ciemny motyw przed pierwszym rysowaniem, żeby nie migało jasne tło
+    try {
+      if (localStorage.getItem('gp-viewer-theme') === 'dark') document.documentElement.dataset.theme = 'dark';
+    } catch (error) {
+      // Bez localStorage zostaje jasny motyw
+    }
+  </script>
   <style>
+    /*
+     * Motyw i komponenty odwzorowują shadcn/ui (styl „new-york”, bazowy kolor „neutral”).
+     * Tokeny mają te same nazwy co w shadcn, a klasy przycisków, pól, tabs, tabeli, karty, badge i alertu
+     * powielają wymiary i stany z kodu komponentów (h-9, rounded-md, shadow-xs, ring 3px itd.).
+     */
     :root {
-      --bg: #f2f2f0;
-      --panel: #ffffff;
-      --text: #1d1d1f;
-      --muted: #6b6b70;
-      --accent: #2b6cb0;
-      --border: #d8d8dc;
-      --play: #e8590c;
+      --background: oklch(1 0 0);
+      --foreground: oklch(0.145 0 0);
+      --card: oklch(1 0 0);
+      --card-foreground: oklch(0.145 0 0);
+      --popover: oklch(1 0 0);
+      --popover-foreground: oklch(0.145 0 0);
+      --primary: oklch(0.205 0 0);
+      --primary-foreground: oklch(0.985 0 0);
+      --secondary: oklch(0.97 0 0);
+      --secondary-foreground: oklch(0.205 0 0);
+      --muted: oklch(0.97 0 0);
+      --muted-foreground: oklch(0.556 0 0);
+      --accent: oklch(0.97 0 0);
+      --accent-foreground: oklch(0.205 0 0);
+      --destructive: oklch(0.577 0.245 27.325);
+      --border: oklch(0.922 0 0);
+      --input: oklch(0.922 0 0);
+      --ring: oklch(0.708 0 0);
+      --sidebar: oklch(0.985 0 0);
+      --sidebar-foreground: oklch(0.145 0 0);
+      --sidebar-accent: oklch(0.97 0 0);
+      --sidebar-accent-foreground: oklch(0.205 0 0);
+      --sidebar-border: oklch(0.922 0 0);
+      --play: oklch(0.646 0.222 41.116);
+      --radius: 0.625rem;
+      --radius-sm: calc(var(--radius) - 4px);
+      --radius-md: calc(var(--radius) - 2px);
+      --radius-lg: var(--radius);
+      --radius-xl: calc(var(--radius) + 4px);
+      --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+      --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+      --ring-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 50%, transparent);
+      /* W jasnym motywie „outline” ma tło strony, w ciemnym input/30 (tak jak w shadcn) */
+      --outline-bg: var(--background);
+      --outline-hover: var(--accent);
+      --check: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fafafa' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E");
+      color-scheme: light;
+    }
+
+    /* Ciemny motyw włącza przełącznik w pasku (atrybut data-theme na <html>) */
+    :root[data-theme="dark"] {
+      --background: oklch(0.145 0 0);
+      --foreground: oklch(0.985 0 0);
+      --card: oklch(0.205 0 0);
+      --card-foreground: oklch(0.985 0 0);
+      --popover: oklch(0.205 0 0);
+      --popover-foreground: oklch(0.985 0 0);
+      --primary: oklch(0.922 0 0);
+      --primary-foreground: oklch(0.205 0 0);
+      --secondary: oklch(0.269 0 0);
+      --secondary-foreground: oklch(0.985 0 0);
+      --muted: oklch(0.269 0 0);
+      --muted-foreground: oklch(0.708 0 0);
+      --accent: oklch(0.269 0 0);
+      --accent-foreground: oklch(0.985 0 0);
+      --destructive: oklch(0.704 0.191 22.216);
+      --border: oklch(1 0 0 / 10%);
+      --input: oklch(1 0 0 / 15%);
+      --ring: oklch(0.556 0 0);
+      --sidebar: oklch(0.205 0 0);
+      --sidebar-foreground: oklch(0.985 0 0);
+      --sidebar-accent: oklch(0.269 0 0);
+      --sidebar-accent-foreground: oklch(0.985 0 0);
+      --sidebar-border: oklch(1 0 0 / 10%);
+      --outline-bg: color-mix(in oklab, var(--input) 30%, transparent);
+      --outline-hover: color-mix(in oklab, var(--input) 50%, transparent);
+      --check: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23262626' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E");
+      color-scheme: dark;
     }
 
     [hidden] { display: none !important; }
 
-    * { box-sizing: border-box; }
+    * {
+      box-sizing: border-box;
+      scrollbar-width: thin;
+      scrollbar-color: color-mix(in oklab, var(--foreground) 22%, transparent) transparent;
+    }
 
     body {
       display: flex;
@@ -25,96 +106,485 @@
       height: 100vh;
       margin: 0;
       overflow: hidden;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background: var(--bg);
-      color: var(--text);
+      font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 14px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      background: var(--background);
+      color: var(--foreground);
     }
+
+    ::selection {
+      background: color-mix(in oklab, var(--primary) 85%, transparent);
+      color: var(--primary-foreground);
+    }
+
+    /* Ikony Lucide (sprite SVG na początku <body>), rozmiar size-4 jak w shadcn */
+    .icon {
+      flex: none;
+      width: 16px;
+      height: 16px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      pointer-events: none;
+    }
+
+    .icon.solid { fill: currentColor; }
 
     .topbar {
       position: sticky;
       top: 0;
       z-index: 10;
       flex-shrink: 0;
+      background: var(--background);
     }
 
+    /* Nagłówek jak w ui.shadcn.com: h-14, border-b, lekko przezroczyste tło z rozmyciem,
+       po lewej logo i nawigacja, po prawej przyciski „ghost” i menu */
     .toolbar {
+      position: relative;
+      z-index: 20;
       display: flex;
       flex-wrap: wrap;
       align-items: center;
-      justify-content: space-between;
-      gap: 12px 16px;
-      padding: 12px 20px;
-      background: var(--panel);
+      gap: 8px 24px;
+      min-height: 56px;
+      padding: 8px 16px;
       border-bottom: 1px solid var(--border);
+      background: color-mix(in oklab, var(--background) 95%, transparent);
+      backdrop-filter: blur(8px);
     }
 
-    .title h1 {
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 8px;
       margin: 0;
-      font-size: 18px;
+      font-size: 16px;
+      font-weight: 600;
+      line-height: 1;
+      letter-spacing: -0.025em;
+      white-space: nowrap;
     }
 
-    #songInfo {
-      color: var(--muted);
-      font-size: 14px;
+    .brand-mark {
+      display: grid;
+      place-items: center;
+      width: 24px;
+      height: 24px;
+      border-radius: var(--radius-md);
+      background: var(--primary);
+      color: var(--primary-foreground);
+    }
+
+    .brand-mark .icon {
+      width: 14px;
+      height: 14px;
+    }
+
+    .nav {
+      display: flex;
+      align-items: center;
+      gap: 4px;
     }
 
     .actions {
       display: flex;
       flex-wrap: wrap;
+      align-items: center;
+      gap: 4px;
+      margin-left: auto;
+    }
+
+    .separator {
+      flex-shrink: 0;
+      align-self: center;
+      width: 1px;
+      height: 16px;
+      margin: 0 6px;
+      background: var(--border);
+    }
+
+    /* Button (domyślnie wariant „outline”): h-9 px-4 text-sm font-medium rounded-md shadow-xs.
+       :where() zeruje specyficzność, więc każdy wariant poniżej łatwo nadpisuje bazę */
+    :where(button) {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
       gap: 8px;
-    }
-
-    button {
+      flex-shrink: 0;
+      height: 36px;
+      padding: 0 16px;
+      border: 1px solid var(--input);
+      border-radius: var(--radius-md);
+      background: var(--outline-bg);
+      color: var(--foreground);
       font: inherit;
-      padding: 8px 14px;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      background: var(--panel);
-      color: var(--text);
+      font-size: 14px;
+      font-weight: 500;
+      line-height: 1;
+      white-space: nowrap;
+      box-shadow: var(--shadow-xs);
       cursor: pointer;
+      outline: none;
+      transition: color 0.15s, background-color 0.15s, border-color 0.15s, box-shadow 0.15s;
     }
 
-    button.primary {
+    :where(button:hover:not(:disabled)) {
+      background: var(--outline-hover);
+      color: var(--accent-foreground);
+    }
+
+    /* Toggle: włączony przycisk ma tło accent (data-[state=on]:bg-accent) */
+    :where(button[aria-pressed="true"]) {
       background: var(--accent);
-      border-color: var(--accent);
-      color: #fff;
+      color: var(--accent-foreground);
     }
 
     button:disabled {
+      pointer-events: none;
       opacity: 0.5;
-      cursor: not-allowed;
     }
 
+    button.primary {
+      border-color: transparent;
+      background: var(--primary);
+      color: var(--primary-foreground);
+    }
+
+    button.primary:hover:not(:disabled) {
+      background: color-mix(in oklab, var(--primary) 90%, transparent);
+      color: var(--primary-foreground);
+    }
+
+    button.sm {
+      height: 32px;
+      gap: 6px;
+      padding: 0 12px;
+    }
+
+    button.icon-btn {
+      width: 36px;
+      padding: 0;
+    }
+
+    button.icon-btn.sm {
+      width: 32px;
+      padding: 0;
+    }
+
+    /* Wspólny focus: border-ring + ring-[3px] ring-ring/50 */
+    button:focus-visible,
+    input:focus-visible,
+    select:focus-visible {
+      border-color: var(--ring);
+      outline: none;
+      box-shadow: var(--ring-shadow);
+    }
+
+    :focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+
+    /* Input i Select: h-9 px-3 py-1 rounded-md border-input shadow-xs */
+    input[type="search"],
+    input[type="number"],
+    select {
+      height: 36px;
+      min-width: 0;
+      padding: 4px 12px;
+      border: 1px solid var(--input);
+      border-radius: var(--radius-md);
+      background-color: var(--outline-bg);
+      color: var(--foreground);
+      font: inherit;
+      font-size: 14px;
+      box-shadow: var(--shadow-xs);
+      outline: none;
+      transition: color 0.15s, box-shadow 0.15s, border-color 0.15s;
+    }
+
+    input::placeholder { color: var(--muted-foreground); }
+
+    input:disabled,
+    select:disabled {
+      cursor: not-allowed;
+      opacity: 0.5;
+    }
+
+    select {
+      appearance: none;
+      -webkit-appearance: none;
+      padding-right: 32px;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+      background-size: 16px;
+      cursor: pointer;
+    }
+
+    :root[data-theme="dark"] select option {
+      background: var(--popover);
+      color: var(--popover-foreground);
+    }
+
+    /* Pole z ikoną lupy po lewej (InputGroup) */
+    .input-icon {
+      position: relative;
+      display: block;
+    }
+
+    .input-icon .icon {
+      position: absolute;
+      top: 50%;
+      left: 10px;
+      color: var(--muted-foreground);
+      transform: translateY(-50%);
+    }
+
+    .input-icon input {
+      width: 100%;
+      padding-left: 34px;
+    }
+
+    /* Checkbox: size-4 rounded-[4px] border-input, zaznaczony na tle primary z ikoną check */
+    input[type="checkbox"] {
+      appearance: none;
+      -webkit-appearance: none;
+      flex-shrink: 0;
+      width: 16px;
+      height: 16px;
+      margin: 0;
+      border: 1px solid var(--input);
+      border-radius: 4px;
+      background: var(--outline-bg) center / 14px no-repeat;
+      box-shadow: var(--shadow-xs);
+      cursor: pointer;
+      outline: none;
+      transition: box-shadow 0.15s, border-color 0.15s;
+    }
+
+    input[type="checkbox"]:checked {
+      border-color: var(--primary);
+      background-color: var(--primary);
+      background-image: var(--check);
+    }
+
+    input[type="checkbox"]:disabled {
+      cursor: not-allowed;
+      opacity: 0.5;
+    }
+
+    /* Slider: tor h-1.5 rounded-full bg-muted, wypełnienie bg-primary (zmienna --fill ustawia JS), kciuk size-4 */
+    input[type="range"] {
+      appearance: none;
+      -webkit-appearance: none;
+      height: 16px;
+      margin: 0;
+      background: transparent;
+      cursor: pointer;
+      --fill: 0%;
+    }
+
+    input[type="range"]:disabled {
+      cursor: not-allowed;
+      opacity: 0.5;
+    }
+
+    input[type="range"]::-webkit-slider-runnable-track {
+      height: 6px;
+      border-radius: 9999px;
+      background: linear-gradient(to right, var(--primary) var(--fill), var(--muted) var(--fill));
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 16px;
+      height: 16px;
+      margin-top: -5px;
+      border: 1px solid var(--primary);
+      border-radius: 9999px;
+      background: #fff;
+      box-shadow: var(--shadow-sm);
+      transition: box-shadow 0.15s;
+    }
+
+    input[type="range"]::-moz-range-track {
+      height: 6px;
+      border-radius: 9999px;
+      background: var(--muted);
+    }
+
+    input[type="range"]::-moz-range-progress {
+      height: 6px;
+      border-radius: 9999px;
+      background: var(--primary);
+    }
+
+    input[type="range"]::-moz-range-thumb {
+      box-sizing: border-box;
+      width: 16px;
+      height: 16px;
+      border: 1px solid var(--primary);
+      border-radius: 9999px;
+      background: #fff;
+      box-shadow: var(--shadow-sm);
+      transition: box-shadow 0.15s;
+    }
+
+    input[type="range"]:not(:disabled):hover::-webkit-slider-thumb,
+    input[type="range"]:focus-visible::-webkit-slider-thumb {
+      box-shadow: 0 0 0 4px color-mix(in oklab, var(--ring) 50%, transparent);
+    }
+
+    input[type="range"]:not(:disabled):hover::-moz-range-thumb,
+    input[type="range"]:focus-visible::-moz-range-thumb {
+      box-shadow: 0 0 0 4px color-mix(in oklab, var(--ring) 50%, transparent);
+    }
+
+    input[type="range"]:focus-visible {
+      border-color: transparent;
+      box-shadow: none;
+    }
+
+    /* Tabs: lista h-9 p-[3px] bg-muted rounded-lg, aktywna zakładka bg-background shadow-sm */
     .modebar-row {
       position: sticky;
       top: 0;
       z-index: 10;
-      padding: 8px 12px;
-      background: var(--panel);
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px 12px;
+      padding: 8px 16px;
+      background: var(--background);
       border-bottom: 1px solid var(--border);
+    }
+
+    #songInfo {
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: var(--muted-foreground);
+      font-size: 14px;
     }
 
     .modebar {
       display: inline-flex;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      overflow: hidden;
+      align-items: center;
+      justify-content: center;
+      height: 36px;
+      padding: 3px;
+      border-radius: var(--radius-lg);
+      background: var(--muted);
     }
 
     .mode {
-      padding: 6px 14px;
-      border: 0;
-      border-radius: 0;
-      background: var(--panel);
+      height: calc(100% - 1px);
+      padding: 4px 12px;
+      border: 1px solid transparent;
+      border-radius: var(--radius-md);
+      background: transparent;
+      color: var(--foreground);
+      box-shadow: none;
     }
 
-    .mode + .mode {
-      border-left: 1px solid var(--border);
+    :root[data-theme="dark"] .mode {
+      color: var(--muted-foreground);
+    }
+
+    .mode:hover:not(:disabled):not([aria-pressed="true"]) {
+      background: transparent;
+      color: var(--foreground);
     }
 
     .mode[aria-pressed="true"] {
+      background: var(--background);
+      color: var(--foreground);
+      box-shadow: var(--shadow-sm);
+    }
+
+    :root[data-theme="dark"] .mode[aria-pressed="true"] {
+      border-color: var(--input);
+      background: color-mix(in oklab, var(--input) 30%, transparent);
+      color: var(--foreground);
+    }
+
+    /* Linki nawigacji: text-foreground/60, aktywny text-foreground (jak w nagłówku shadcn) */
+    .view-btn {
+      height: 32px;
+      padding: 0 12px;
+      border: 0;
+      background: transparent;
+      color: color-mix(in oklab, var(--foreground) 60%, transparent);
+      box-shadow: none;
+    }
+
+    .view-btn:hover:not(:disabled),
+    .view-btn[aria-pressed="true"] {
+      background: transparent;
+      color: var(--foreground);
+    }
+
+    /* Ghost: bez ramki i cienia, hover na tle accent */
+    button.ghost {
+      border-color: transparent;
+      background: transparent;
+      box-shadow: none;
+    }
+
+    button.ghost:hover:not(:disabled),
+    button.ghost[aria-pressed="true"] {
       background: var(--accent);
-      color: #fff;
+      color: var(--accent-foreground);
+    }
+
+    /* DropdownMenu: popover z elementami h-auto px-2 py-1.5, hover na tle accent */
+    .menu {
+      position: relative;
+    }
+
+    .menu-content {
+      position: absolute;
+      top: calc(100% + 4px);
+      right: 0;
+      z-index: 50;
+      min-width: 208px;
+      padding: 4px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      background: var(--popover);
+      color: var(--popover-foreground);
+      box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    }
+
+    .menu-item {
+      justify-content: flex-start;
+      width: 100%;
+      height: auto;
+      padding: 6px 8px;
+      border: 0;
+      border-radius: var(--radius-sm);
+      background: transparent;
+      font-weight: 400;
+      line-height: 1.43;
+      box-shadow: none;
+    }
+
+    .menu-item .icon {
+      color: var(--muted-foreground);
+    }
+
+    .menu-item:hover:not(:disabled),
+    .menu-item:focus-visible {
+      border-color: transparent;
+      background: var(--accent);
+      color: var(--accent-foreground);
+      box-shadow: none;
     }
 
     .layout {
@@ -123,40 +593,43 @@
       min-height: 0;
     }
 
+    /* Sidebar: tło i obramowanie z tokenów sidebar-*, nagłówek grupy jak SidebarGroupLabel */
     .sidebar {
       width: 300px;
       flex-shrink: 0;
-      padding: 16px 12px;
+      padding: 8px;
       overflow-y: auto;
-      background: var(--panel);
-      border-right: 1px solid var(--border);
+      background: var(--sidebar);
+      color: var(--sidebar-foreground);
+      border-right: 1px solid var(--sidebar-border);
     }
 
-    .sidebar h2 {
-      margin: 0 4px 8px;
+    .sidebar h2,
+    .track-panel h2 {
+      display: flex;
+      align-items: center;
+      height: 32px;
+      margin: 0;
+      padding: 0 8px;
       font-size: 12px;
-      letter-spacing: 0.05em;
-      text-transform: uppercase;
-      color: var(--muted);
+      font-weight: 500;
+      color: color-mix(in oklab, var(--sidebar-foreground) 70%, transparent);
     }
 
     .search {
       width: 100%;
-      margin: 0 0 4px;
-      padding: 7px 10px;
-      font: inherit;
-      font-size: 14px;
-      border: 1px solid var(--border);
-      border-radius: 6px;
     }
+
+    .sidebar .input-icon { margin: 0 0 4px; }
 
     .search-info {
       min-height: 1em;
-      margin: 0 4px 8px;
+      margin: 0 8px 8px;
       font-size: 12px;
-      color: var(--muted);
+      color: var(--muted-foreground);
     }
 
+    /* Drzewo plików = SidebarMenu: pozycje h-8 rounded-md, aktywna na tle sidebar-accent z font-medium */
     .tree ul {
       list-style: none;
       margin: 0;
@@ -164,7 +637,9 @@
     }
 
     .tree .children {
-      padding-left: 14px;
+      margin: 2px 0 2px 14px;
+      padding-left: 6px;
+      border-left: 1px solid var(--sidebar-border);
     }
 
     .tree .row {
@@ -174,69 +649,190 @@
     }
 
     .tree .caret {
-      flex-shrink: 0;
-      width: 22px;
-      height: 28px;
+      width: 24px;
+      height: 32px;
       padding: 0;
       border: 0;
+      border-radius: var(--radius-md);
       background: none;
-      color: var(--muted);
-      font-size: 11px;
+      color: var(--muted-foreground);
+      box-shadow: none;
+    }
+
+    .tree .caret:hover:not(:disabled) {
+      background: var(--sidebar-accent);
+      color: var(--sidebar-accent-foreground);
+    }
+
+    .tree .caret .icon {
+      width: 14px;
+      height: 14px;
+      transition: transform 0.2s;
+    }
+
+    .tree .caret[aria-expanded="true"] .icon { transform: rotate(90deg); }
+
+    /* Pliki nie mają rozwijania, ale zostawiamy miejsce po strzałce, żeby nazwy były w jednej linii */
+    .tree .caret-spacer {
+      flex-shrink: 0;
+      width: 24px;
     }
 
     .tree .label {
       flex: 1;
+      justify-content: flex-start;
+      gap: 8px;
       min-width: 0;
-      padding: 4px 6px;
+      height: 32px;
+      padding: 0 8px;
       border: 0;
-      border-radius: 4px;
+      border-radius: var(--radius-md);
       background: none;
-      color: var(--text);
-      font-size: 14px;
+      color: var(--sidebar-foreground);
+      font-weight: 400;
       text-align: left;
+      box-shadow: none;
+    }
+
+    .tree .label .icon { color: var(--muted-foreground); }
+
+    .tree .label-text {
+      min-width: 0;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
     }
 
-    .tree .label:hover {
-      background: var(--bg);
+    .tree .label:hover:not(:disabled) {
+      background: var(--sidebar-accent);
+      color: var(--sidebar-accent-foreground);
     }
 
-    .tree .dir > .row .label {
-      color: var(--muted);
-      font-weight: 600;
+    .tree .label:focus-visible {
+      border-color: transparent;
+      box-shadow: var(--ring-shadow);
     }
+
+    .tree .dir > .row .label { font-weight: 500; }
 
     .tree .file.current > .row .label {
-      background: var(--accent);
-      color: #fff;
+      background: var(--sidebar-accent);
+      color: var(--sidebar-accent-foreground);
+      font-weight: 500;
     }
 
-    .tree .tracks {
-      padding: 2px 0 6px 24px;
+    .tree .file.current > .row .label .icon { color: var(--play); }
+
+    /* Każda ścieżka to Card: nazwa z kolorem, a pod nią wyciszenie, solo i głośność */
+    .track-panel .track {
+      margin: 0 0 8px;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      background: var(--card);
+      color: var(--card-foreground);
+      box-shadow: var(--shadow-xs);
+      transition: opacity 0.15s;
     }
 
-    .tree .track label {
+    .track-panel .track.is-hidden { opacity: 0.55; }
+
+    .track-panel .track-head {
       display: flex;
       align-items: center;
       gap: 8px;
       min-width: 0;
-      padding: 3px 4px;
-      font-size: 13px;
+      font-size: 14px;
+      font-weight: 500;
+      line-height: 1;
       cursor: pointer;
     }
 
-    .tree .track label span {
+    .track-panel .track-swatch {
+      flex-shrink: 0;
+      width: 10px;
+      height: 10px;
+      border-radius: 9999px;
+    }
+
+    .track-panel .track-name {
+      flex: 1;
+      min-width: 0;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
     }
 
-    .tree .note {
-      padding: 3px 4px;
-      font-size: 13px;
-      color: var(--muted);
+    .track-panel .track-mix {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 10px;
+    }
+
+    .track-panel .track-mix button {
+      width: 28px;
+      height: 28px;
+      padding: 0;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .track-panel .track-mix button[aria-pressed="true"] {
+      border-color: transparent;
+      background: var(--primary);
+      color: var(--primary-foreground);
+    }
+
+    .track-panel .track-mix button.solo[aria-pressed="true"] {
+      background: var(--play);
+      color: #fff;
+    }
+
+    .track-panel .track-volume {
+      flex: 1;
+      min-width: 0;
+      margin: 0;
+    }
+
+    .track-panel .track-vol-value {
+      flex-shrink: 0;
+      width: 40px;
+      text-align: right;
+      font-size: 12px;
+      color: var(--muted-foreground);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .note {
+      margin: 0;
+      padding: 4px 8px;
+      font-size: 14px;
+      color: var(--muted-foreground);
+    }
+
+    /* Panel ścieżek stoi obok partytury; pokazuje ścieżki wczytanego utworu */
+    .track-panel {
+      width: 260px;
+      flex-shrink: 0;
+      padding: 8px;
+      overflow-y: auto;
+      background: var(--sidebar);
+      color: var(--sidebar-foreground);
+      border-left: 1px solid var(--sidebar-border);
+    }
+
+    .track-panel-info {
+      min-height: 1em;
+      margin: 0 8px 10px;
+      font-size: 12px;
+      color: var(--muted-foreground);
+    }
+
+    .track-panel ul {
+      list-style: none;
+      margin: 0;
+      padding: 0;
     }
 
     #viewer {
@@ -246,44 +842,78 @@
       overflow: auto;
     }
 
+    /* Empty: przerywana ramka, ikona w kafelku bg-muted, tytuł i opis */
     .placeholder {
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 8px;
+      gap: 6px;
       min-height: 60vh;
-      border: 2px dashed var(--border);
-      border-radius: 12px;
-      color: var(--muted);
+      padding: 48px 24px;
+      border: 1px dashed var(--border);
+      border-radius: var(--radius-lg);
       text-align: center;
+    }
+
+    .placeholder .empty-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+      height: 40px;
+      margin-bottom: 10px;
+      border-radius: var(--radius-lg);
+      background: var(--muted);
+      color: var(--foreground);
+    }
+
+    .placeholder .empty-icon .icon {
+      width: 20px;
+      height: 20px;
     }
 
     .placeholder p {
       margin: 0;
-      font-size: 16px;
+      font-size: 18px;
+      font-weight: 500;
+      line-height: 1.4;
+      letter-spacing: -0.025em;
     }
 
     .placeholder small {
-      font-size: 13px;
+      max-width: 420px;
+      font-size: 14px;
+      color: var(--muted-foreground);
     }
 
+    /* Partytura zawsze na białym „papierze”, bo alphaTab rysuje czarne symbole */
     #alphaTab {
       padding: 16px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
       background: #fff;
-      border-radius: 4px;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+      box-shadow: var(--shadow-sm);
     }
 
+    /* Alert (wariant destructive): ikona + opis, rounded-lg border px-4 py-3 text-sm */
     .message {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
       flex-shrink: 0;
       margin: 16px 24px 0;
-      padding: 10px 14px;
-      border-radius: 6px;
-      background: #fdecea;
-      color: #8a1f11;
+      padding: 12px 16px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      background: var(--card);
+      color: var(--destructive);
       font-size: 14px;
     }
+
+    .message .icon { margin-top: 2px; }
+
+    .message-text { min-width: 0; }
 
     /* Uderzenie, które aktualnie brzmi, podświetlamy kolorem akcentu */
     #alphaTab .at-highlight,
@@ -296,25 +926,20 @@
       display: flex;
       flex-wrap: wrap;
       align-items: center;
-      gap: 10px 14px;
-      padding: 8px 16px;
-      background: var(--panel);
+      gap: 10px 16px;
+      padding: 10px 16px;
+      background: var(--background);
       border-top: 1px solid var(--border);
     }
 
     .playbar .transport {
       display: flex;
-      gap: 6px;
-    }
-
-    .playbar .icon {
-      min-width: 42px;
-      padding: 6px 10px;
+      gap: 8px;
     }
 
     .playbar .time {
       font-size: 14px;
-      color: var(--muted);
+      color: var(--muted-foreground);
       font-variant-numeric: tabular-nums;
       white-space: nowrap;
     }
@@ -324,24 +949,332 @@
       min-width: 120px;
     }
 
+    .playbar #masterVolume {
+      flex: none;
+      width: 110px;
+      min-width: 0;
+    }
+
     .playbar label {
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 8px;
       font-size: 14px;
-      color: var(--muted);
+      font-weight: 500;
+      line-height: 1;
     }
 
+    .playbar label .icon { color: var(--muted-foreground); }
+
     .playbar .status {
-      font-size: 13px;
-      color: var(--muted);
+      font-size: 12px;
+      color: var(--muted-foreground);
+    }
+
+    /* Ramka „teraz gra”: tytuł utworu i dźwięki, które brzmią w tej chwili */
+    .now-box {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 2px;
+      min-width: 0;
+      max-width: 360px;
+      padding: 6px 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      background: var(--accent);
+    }
+
+    .playbar .footer-song {
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 15px;
+      font-weight: 600;
     }
 
     .playbar .now-playing {
-      min-width: 180px;
-      font-size: 14px;
-      font-weight: 600;
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 13px;
+      font-weight: 500;
       color: var(--play);
+    }
+
+    .playbar .now-playing:empty {
+      display: none;
+    }
+
+    /* Biblioteka zajmuje obszar podglądu; placeholder znika, a partytura zostaje w układzie poza ekranem.
+       alphaTab nie gra ani nie rysuje, gdy kontener ma display: none (szerokość 0) */
+    #viewer.library-mode > #placeholder {
+      display: none !important;
+    }
+
+    /* alphaTab ustawia kontenerowi inline position: relative, stąd !important.
+       Element nie wchodzi w przepływ, więc nie wydłuża przewijanego widoku biblioteki */
+    #viewer.library-mode > #alphaTab {
+      position: fixed !important;
+      left: -10000px !important;
+      top: 0 !important;
+      width: 900px !important;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    .library {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .lib-filters {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .lib-search {
+      width: 240px;
+    }
+
+    .lib-filters input[type="number"] {
+      width: 84px;
+    }
+
+    .lib-filters label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      line-height: 1;
+    }
+
+    .lib-filters label.muted { color: var(--muted-foreground); }
+
+    .lib-count {
+      margin-left: auto;
+      font-size: 14px;
+      color: var(--muted-foreground);
+      white-space: nowrap;
+    }
+
+    /* Tabela jak w przykładzie „Data Table”: ramka rounded-md, wiersze z border-b i hover bg-muted/50 */
+    .lib-scroll {
+      overflow-x: auto;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+    }
+
+    .lib-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+      caption-side: bottom;
+    }
+
+    .lib-table th,
+    .lib-table td {
+      padding: 8px;
+      text-align: left;
+      vertical-align: middle;
+      white-space: nowrap;
+    }
+
+    .lib-table td {
+      max-width: 320px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .lib-table th {
+      height: 40px;
+      font-weight: 500;
+    }
+
+    .lib-table thead tr,
+    .lib-table tbody tr {
+      border-bottom: 1px solid var(--border);
+    }
+
+    .lib-table tbody tr:last-child { border-bottom: 0; }
+
+    /* Nagłówek sortowania to przycisk „ghost” z ikoną ArrowUpDown */
+    .lib-table th button.sort {
+      height: 32px;
+      margin-left: -8px;
+      padding: 0 8px;
+      border: 0;
+      background: none;
+      box-shadow: none;
+    }
+
+    .lib-table th button.sort:hover:not(:disabled) {
+      background: var(--accent);
+      color: var(--accent-foreground);
+    }
+
+    .lib-table th button.sort .icon {
+      width: 14px;
+      height: 14px;
+      opacity: 0.5;
+    }
+
+    .lib-table th[aria-sort="ascending"] button.sort .icon,
+    .lib-table th[aria-sort="descending"] button.sort .icon {
+      opacity: 1;
+    }
+
+    .lib-table tbody tr {
+      cursor: pointer;
+      transition: background-color 0.15s;
+    }
+
+    .lib-table tbody tr:hover {
+      background: color-mix(in oklab, var(--muted) 50%, transparent);
+    }
+
+    .lib-table tbody tr.current {
+      background: var(--muted);
+      font-weight: 500;
+    }
+
+    .lib-table tbody tr:focus-visible {
+      outline: none;
+      box-shadow: inset 0 0 0 2px color-mix(in oklab, var(--ring) 70%, transparent);
+    }
+
+    .lib-table td.lib-low {
+      color: var(--muted-foreground);
+      font-style: italic;
+    }
+
+    /* Badge (outline): rounded-md border px-2 py-0.5 text-xs font-medium */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: fit-content;
+      padding: 2px 8px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      font-size: 12px;
+      font-weight: 500;
+      line-height: 1.33;
+      white-space: nowrap;
+    }
+
+    /* Mini odtwarzacz nad tabelą (Card) i przycisk odtwarzania w wierszu (icon, size-8) */
+    /* Filtry i mini odtwarzacz są przypięte na górze biblioteki, więc zostają widoczne przy przewijaniu tabeli */
+    /* top: -24px, bo sticky liczy się od wewnętrznej krawędzi paddingu przewijanego obszaru (#viewer) */
+    .lib-sticky {
+      position: sticky;
+      top: -24px;
+      z-index: 5;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin: -24px -24px 0;
+      padding: 24px 24px 12px;
+      background: var(--background);
+    }
+
+    /* Na telefonie cała strona się przewija, więc przypięcie kryłoby pasek narzędzi */
+    @media (max-width: 720px) {
+      .lib-sticky {
+        position: static;
+        margin: 0;
+        padding: 0;
+        background: none;
+      }
+    }
+
+    .lib-mini {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 8px 8px 16px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      background: var(--card);
+      color: var(--card-foreground);
+      box-shadow: var(--shadow-xs);
+    }
+
+    .lib-mini-text {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 4px;
+    }
+
+    .lib-mini-title {
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    /* Dźwięki, które brzmią teraz, w osobnej ramce */
+    .lib-mini-notes {
+      max-width: 100%;
+      padding: 2px 10px;
+      border-radius: var(--radius-sm);
+      background: var(--accent);
+      color: var(--play);
+      font-size: 13px;
+      font-weight: 500;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .lib-mini-notes:empty {
+      display: none;
+    }
+
+    .lib-table .lib-play-cell {
+      width: 48px;
+      padding-right: 0;
+    }
+
+    .lib-play.is-current {
+      border-color: transparent;
+      background: var(--primary);
+      color: var(--primary-foreground);
+    }
+
+    .lib-pager {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
+      font-size: 14px;
+      color: var(--muted-foreground);
+    }
+
+    .lib-pager #libPage {
+      order: -1;
+      margin-right: auto;
+    }
+
+    @media (max-width: 900px) {
+      .actions .btn-label { display: none; }
+
+      .actions button.ghost.collapsible {
+        width: 32px;
+        padding: 0;
+      }
     }
 
     @media (max-width: 720px) {
@@ -367,7 +1300,17 @@
         border-bottom: 1px solid var(--border);
       }
 
+      /* Na telefonie panel ścieżek stoi nad partyturą (partytura bywa bardzo długa), a jego lista przewija się sama */
+      .track-panel {
+        order: 1;
+        width: auto;
+        max-height: 40vh;
+        border-left: 0;
+        border-bottom: 1px solid var(--border);
+      }
+
       #viewer {
+        order: 2;
         padding: 16px;
         overflow: visible;
       }
@@ -413,7 +1356,9 @@
 
       .topbar,
       .sidebar,
+      .track-panel,
       .placeholder,
+      .library,
       .message,
       .playbar,
       #alphaTab {
@@ -436,22 +1381,65 @@
   </style>
 </head>
 <body>
+  <!-- Ikony Lucide jako sprite: <svg class="icon"><use href="#i-nazwa"/></svg> -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <defs>
+      <symbol id="i-play" viewBox="0 0 24 24"><polygon points="6 3 20 12 6 21 6 3"/></symbol>
+      <symbol id="i-pause" viewBox="0 0 24 24"><rect x="14" y="3" width="5" height="18" rx="1"/><rect x="5" y="3" width="5" height="18" rx="1"/></symbol>
+      <symbol id="i-square" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2"/></symbol>
+      <symbol id="i-files" viewBox="0 0 24 24"><path d="M20 7h-3a2 2 0 0 1-2-2V2"/><path d="M9 18a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h7l4 4v10a2 2 0 0 1-2 2Z"/><path d="M3 7.6v12.8A1.6 1.6 0 0 0 4.6 22h9.8"/></symbol>
+      <symbol id="i-folder" viewBox="0 0 24 24"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></symbol>
+      <symbol id="i-folder-open" viewBox="0 0 24 24"><path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2"/></symbol>
+      <symbol id="i-panel-left" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/></symbol>
+      <symbol id="i-list-music" viewBox="0 0 24 24"><path d="M21 15V6"/><path d="M18.5 18a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z"/><path d="M12 12H3"/><path d="M16 6H3"/><path d="M12 18H3"/></symbol>
+      <symbol id="i-moon" viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></symbol>
+      <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></symbol>
+      <symbol id="i-printer" viewBox="0 0 24 24"><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 9V3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v6"/><rect x="6" y="14" width="12" height="8" rx="1"/></symbol>
+      <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></symbol>
+      <symbol id="i-chevron-right" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+      <symbol id="i-chevron-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+      <symbol id="i-chevron-left" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
+      <symbol id="i-music" viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></symbol>
+      <symbol id="i-volume-2" viewBox="0 0 24 24"><path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z"/><path d="M16 9a5 5 0 0 1 0 6"/><path d="M19.364 18.364a9 9 0 0 0 0-12.728"/></symbol>
+      <symbol id="i-circle-alert" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></symbol>
+      <symbol id="i-arrow-up-down" viewBox="0 0 24 24"><path d="m21 16-4 4-4-4"/><path d="M17 20V4"/><path d="m3 8 4-4 4 4"/><path d="M7 4v16"/></symbol>
+      <symbol id="i-arrow-up" viewBox="0 0 24 24"><path d="m5 12 7-7 7 7"/><path d="M12 19V5"/></symbol>
+      <symbol id="i-arrow-down" viewBox="0 0 24 24"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></symbol>
+      <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol>
+      <symbol id="i-file-up" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M12 12v6"/><path d="m15 15-3-3-3 3"/></symbol>
+    </defs>
+  </svg>
+
   <div class="topbar">
     <header class="toolbar">
-      <div class="title">
-        <h1>GP Viewer</h1>
-        <div id="songInfo">Nie wczytano pliku</div>
-      </div>
+      <h1 class="brand">
+        <span class="brand-mark"><svg class="icon"><use href="#i-music"/></svg></span>
+        GP Viewer
+      </h1>
+      <nav class="nav" aria-label="Widok">
+        <button type="button" class="view-btn" data-view="score" aria-pressed="true">Partytura</button>
+        <button type="button" class="view-btn" data-view="library" aria-pressed="false">Biblioteka</button>
+      </nav>
       <div class="actions">
         <input type="file" id="fileInput" accept=".gp,.gp3,.gp4,.gp5,.gpx" multiple hidden>
         <input type="file" id="folderInput" webkitdirectory hidden>
-        <button type="button" id="openFileBtn">Otwórz pliki…</button>
-        <button type="button" id="openFolderBtn">Otwórz folder…</button>
-        <button type="button" id="printBtn" class="primary" disabled>Drukuj</button>
+        <div class="menu">
+          <button type="button" id="openMenuBtn" class="sm" aria-haspopup="menu" aria-expanded="false" aria-controls="openMenuContent"><svg class="icon"><use href="#i-file-up"/></svg>Otwórz<svg class="icon"><use href="#i-chevron-down"/></svg></button>
+          <div id="openMenuContent" class="menu-content" role="menu" hidden>
+            <button type="button" id="openFileBtn" class="menu-item" role="menuitem"><svg class="icon"><use href="#i-files"/></svg>Otwórz pliki…</button>
+            <button type="button" id="openFolderBtn" class="menu-item" role="menuitem"><svg class="icon"><use href="#i-folder-open"/></svg>Otwórz folder…</button>
+          </div>
+        </div>
+        <span class="separator" role="separator" aria-orientation="vertical"></span>
+        <button type="button" id="foldersToggle" class="ghost sm collapsible" aria-pressed="true" title="Panel plików"><svg class="icon"><use href="#i-panel-left"/></svg><span class="btn-label">Foldery</span></button>
+        <button type="button" id="trackPanelBtn" class="ghost sm collapsible" aria-pressed="true" title="Panel ścieżek" disabled><svg class="icon"><use href="#i-list-music"/></svg><span class="btn-label">Ścieżki</span></button>
+        <button type="button" id="themeToggle" class="ghost icon-btn sm" aria-label="Przełącz motyw" title="Przełącz motyw"><svg class="icon"><use href="#i-moon"/></svg></button>
+        <button type="button" id="printBtn" class="primary sm" disabled><svg class="icon"><use href="#i-printer"/></svg>Drukuj</button>
       </div>
     </header>
 
     <div class="modebar-row">
+      <div id="songInfo">Nie wczytano pliku</div>
       <div class="modebar" role="group" aria-label="Tryb wyświetlania">
         <button type="button" class="mode" data-mode="score" aria-pressed="false">Nuty</button>
         <button type="button" class="mode" data-mode="tab" aria-pressed="false">Tabulatura</button>
@@ -460,12 +1448,18 @@
     </div>
   </div>
 
-  <div id="message" class="message" hidden></div>
+  <div id="message" class="message" role="alert" hidden>
+    <svg class="icon"><use href="#i-circle-alert"/></svg>
+    <div id="messageText" class="message-text"></div>
+  </div>
 
   <div class="layout">
     <aside class="sidebar">
-      <h2>Pliki i ścieżki</h2>
-      <input type="search" id="searchInput" class="search" placeholder="Szukaj utworu…" aria-label="Szukaj utworu" disabled>
+      <h2>Pliki</h2>
+      <div class="input-icon">
+        <svg class="icon"><use href="#i-search"/></svg>
+        <input type="search" id="searchInput" class="search" placeholder="Szukaj utworu…" aria-label="Szukaj utworu" disabled>
+      </div>
       <p id="searchInfo" class="search-info"></p>
       <div id="tree" class="tree">
         <p class="note">Brak wczytanych plików</p>
@@ -473,23 +1467,87 @@
     </aside>
 
     <main id="viewer">
+      <section id="library" class="library" aria-label="Biblioteka utworów" hidden>
+        <div class="lib-sticky">
+        <div class="lib-filters">
+          <div class="input-icon">
+            <svg class="icon"><use href="#i-search"/></svg>
+            <input type="search" id="libSearch" class="lib-search" placeholder="Zespół lub tytuł…" aria-label="Szukaj: zespół lub tytuł">
+          </div>
+          <select id="libGenre" aria-label="Gatunek"></select>
+          <select id="libFormat" aria-label="Format">
+            <option value="">Wszystkie formaty</option>
+            <option value="GP3">GP3</option>
+            <option value="GP4">GP4</option>
+            <option value="GP5">GP5</option>
+            <option value="GPX">GPX</option>
+            <option value="GP">GP7</option>
+          </select>
+          <select id="libCollection" aria-label="Kolekcja"></select>
+          <label class="muted">Rok od <input type="number" id="libYearFrom" min="1900" max="2100" step="1" aria-label="Rok od"></label>
+          <label class="muted">do <input type="number" id="libYearTo" min="1900" max="2100" step="1" aria-label="Rok do"></label>
+          <label><input type="checkbox" id="libSureGenre"> Tylko pewny gatunek</label>
+          <button type="button" id="libReset"><svg class="icon"><use href="#i-x"/></svg>Wyczyść filtry</button>
+          <span id="libCount" class="lib-count" aria-live="polite"></span>
+        </div>
+        <div id="libMini" class="lib-mini" hidden>
+          <div class="lib-mini-text">
+            <span id="libMiniTitle" class="lib-mini-title" aria-live="polite"></span>
+            <span id="libMiniNotes" class="lib-mini-notes" aria-live="polite"></span>
+          </div>
+          <button type="button" id="libMiniPlay" class="icon-btn sm" aria-label="Odtwórz" disabled><svg class="icon solid"><use href="#i-play"/></svg></button>
+          <button type="button" id="libMiniStop" class="icon-btn sm" aria-label="Zatrzymaj"><svg class="icon solid"><use href="#i-square"/></svg></button>
+        </div>
+        </div>
+        <div class="lib-scroll">
+          <table class="lib-table">
+            <thead>
+              <tr>
+                <th class="lib-play-cell" aria-label="Odtwarzanie"></th>
+                <th><button type="button" class="sort" data-key="band">Zespół<svg class="icon"><use href="#i-arrow-up-down"/></svg></button></th>
+                <th><button type="button" class="sort" data-key="title">Tytuł<svg class="icon"><use href="#i-arrow-up-down"/></svg></button></th>
+                <th><button type="button" class="sort" data-key="genre">Gatunek<svg class="icon"><use href="#i-arrow-up-down"/></svg></button></th>
+                <th><button type="button" class="sort" data-key="year">Rok<svg class="icon"><use href="#i-arrow-up-down"/></svg></button></th>
+                <th><button type="button" class="sort" data-key="collection">Kolekcja<svg class="icon"><use href="#i-arrow-up-down"/></svg></button></th>
+                <th><button type="button" class="sort" data-key="format">Format<svg class="icon"><use href="#i-arrow-up-down"/></svg></button></th>
+              </tr>
+            </thead>
+            <tbody id="libBody"></tbody>
+          </table>
+        </div>
+        <div class="lib-pager">
+          <button type="button" id="libPrev" class="sm"><svg class="icon"><use href="#i-chevron-left"/></svg>Poprzednia</button>
+          <span id="libPage"></span>
+          <button type="button" id="libNext" class="sm">Następna<svg class="icon"><use href="#i-chevron-right"/></svg></button>
+        </div>
+      </section>
       <div id="placeholder" class="placeholder">
+        <div class="empty-icon"><svg class="icon"><use href="#i-file-up"/></svg></div>
         <p>Przeciągnij tutaj pliki Guitar Pro albo cały folder<br>lub kliknij „Otwórz pliki…” albo „Otwórz folder…”</p>
         <small>Obsługiwane formaty: .gp3, .gp4, .gp5, .gpx, .gp (GP7)</small>
       </div>
       <div id="alphaTab" hidden></div>
       <div id="printArea" aria-hidden="true"></div>
     </main>
+
+    <aside id="trackPanel" class="track-panel" aria-label="Ścieżki utworu" hidden>
+      <h2>Ścieżki</h2>
+      <p id="trackPanelInfo" class="track-panel-info"></p>
+      <ul id="trackList"></ul>
+    </aside>
   </div>
 
   <footer class="playbar">
     <div class="transport">
-      <button type="button" id="stopBtn" class="icon" aria-label="Zatrzymaj">■</button>
-      <button type="button" id="playBtn" class="primary icon" aria-label="Odtwórz" disabled>▶</button>
+      <button type="button" id="stopBtn" class="icon-btn" aria-label="Zatrzymaj"><svg class="icon solid"><use href="#i-square"/></svg></button>
+      <button type="button" id="playBtn" class="primary icon-btn" aria-label="Odtwórz" disabled><svg class="icon solid"><use href="#i-play"/></svg></button>
     </div>
     <span id="timeInfo" class="time">0:00 / 0:00</span>
     <input type="range" id="seekBar" min="0" max="1000" value="0" aria-label="Pozycja w utworze" disabled>
-    <span id="nowPlaying" class="now-playing" aria-live="polite">—</span>
+    <div class="now-box">
+      <span id="footerSong" class="footer-song" aria-live="polite"></span>
+      <span id="nowPlaying" class="now-playing" aria-live="polite">—</span>
+    </div>
     <label>Tempo
       <select id="speedSelect">
         <option value="0.5">50%</option>
@@ -498,14 +1556,21 @@
         <option value="1.25">125%</option>
       </select>
     </label>
+    <label><svg class="icon"><use href="#i-volume-2"/></svg>Głośność
+      <input type="range" id="masterVolume" min="0" max="200" step="5" value="100" aria-label="Głośność całości">
+    </label>
     <span id="playStatus" class="status">Ładowanie brzmień…</span>
   </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/@coderline/alphatab@1.8.4/dist/alphaTab.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/sql-wasm.js"></script>
   <script>
     const GP_EXTENSIONS = ['.gp', '.gp3', '.gp4', '.gp5', '.gpx'];
     // Brzmienia do odtwarzania (SoundFont z tej samej wersji biblioteki co alphaTab)
     const SOUNDFONT_URL = 'https://cdn.jsdelivr.net/npm/@coderline/alphatab@1.8.4/dist/soundfont/sonivox.sf3';
+    // Indeks katalogu tabs/ budowany przez scripts/build-tabs-index.py i czytany przez sql.js
+    const LIBRARY_DB_URL = 'tabs.sqlite';
+    const SQL_JS_BASE = 'https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/';
 
     const els = {
       fileInput: document.getElementById('fileInput'),
@@ -513,12 +1578,17 @@
       openFileBtn: document.getElementById('openFileBtn'),
       openFolderBtn: document.getElementById('openFolderBtn'),
       printBtn: document.getElementById('printBtn'),
+      trackPanelBtn: document.getElementById('trackPanelBtn'),
+      trackPanel: document.getElementById('trackPanel'),
+      trackPanelInfo: document.getElementById('trackPanelInfo'),
+      trackList: document.getElementById('trackList'),
       songInfo: document.getElementById('songInfo'),
       modes: document.querySelectorAll('.mode'),
       tree: document.getElementById('tree'),
       searchInput: document.getElementById('searchInput'),
       searchInfo: document.getElementById('searchInfo'),
       message: document.getElementById('message'),
+      messageText: document.getElementById('messageText'),
       placeholder: document.getElementById('placeholder'),
       score: document.getElementById('alphaTab'),
       printArea: document.getElementById('printArea'),
@@ -528,8 +1598,33 @@
       seekBar: document.getElementById('seekBar'),
       timeInfo: document.getElementById('timeInfo'),
       speedSelect: document.getElementById('speedSelect'),
+      masterVolume: document.getElementById('masterVolume'),
+      viewButtons: document.querySelectorAll('.view-btn'),
+      library: document.getElementById('library'),
+      sidebar: document.querySelector('.sidebar'),
+      foldersToggle: document.getElementById('foldersToggle'),
+      themeToggle: document.getElementById('themeToggle'),
+      libSearch: document.getElementById('libSearch'),
+      libGenre: document.getElementById('libGenre'),
+      libFormat: document.getElementById('libFormat'),
+      libCollection: document.getElementById('libCollection'),
+      libYearFrom: document.getElementById('libYearFrom'),
+      libYearTo: document.getElementById('libYearTo'),
+      libSureGenre: document.getElementById('libSureGenre'),
+      libReset: document.getElementById('libReset'),
+      libCount: document.getElementById('libCount'),
+      libBody: document.getElementById('libBody'),
+      libMini: document.getElementById('libMini'),
+      libMiniTitle: document.getElementById('libMiniTitle'),
+      libMiniNotes: document.getElementById('libMiniNotes'),
+      libMiniPlay: document.getElementById('libMiniPlay'),
+      libMiniStop: document.getElementById('libMiniStop'),
+      libPrev: document.getElementById('libPrev'),
+      libNext: document.getElementById('libNext'),
+      libPage: document.getElementById('libPage'),
       playStatus: document.getElementById('playStatus'),
       nowPlaying: document.getElementById('nowPlaying'),
+      footerSong: document.getElementById('footerSong'),
     };
 
     const api = new alphaTab.AlphaTabApi(els.score, {
@@ -552,7 +1647,14 @@
     let playlist = [];
     let tree = null;
     let expandedDirs = new Set();
-    let expandedSongs = new Set();
+    // Na telefonie panel ścieżek startuje zwinięty, żeby nie zasłaniał partytury; otwiera go przycisk „Ścieżki”
+    let trackPanelOpen = window.innerWidth > 720;
+    // Panel plików działa tak samo jak panel ścieżek: na telefonie startuje zwinięty
+    let foldersOpen = window.innerWidth > 720;
+    // Stan odtwarzania dla mini odtwarzacza w bibliotece
+    let isPlaying = false;
+    // Utwór kliknięty w bibliotece ma zagrać, gdy tylko się wczyta
+    let playWhenReady = false;
     let currentIndex = -1;
     let loadedIndex = -1;
     let loadToken = 0;
@@ -560,15 +1662,42 @@
     let seeking = false;
     let duration = 0;
     let searchQuery = '';
+    // Wyniki liczymy raz na zmianę zapytania: searchMatches[i] = 1 dla pasującego utworu
+    let searchMatches = null;
+    let searchTotal = 0;
+    // Przy wyszukiwaniu pokazujemy najwyżej tyle wierszy, żeby krótkie zapytanie nie zamulało drzewa
+    const SEARCH_RENDER_LIMIT = 500;
+    let renderBudget = Infinity;
+
+    // Ikony Lucide ze sprite'a na początku <body>: podmieniamy tylko odnośnik <use>, więc przyciski zachowują rozmiar
+    function iconMarkup(name, solid = false) {
+      return `<svg class="icon${solid ? ' solid' : ''}"><use href="#i-${name}"/></svg>`;
+    }
+
+    function setIcon(button, name) {
+      button.querySelector('use').setAttribute('href', `#i-${name}`);
+    }
+
+    // Wypełnienie suwaka (część „primary” toru) ustawiamy zmienną --fill, bo WebKit nie ma ::-moz-range-progress
+    function syncRange(input) {
+      const min = Number(input.min || 0);
+      const max = Number(input.max || 100);
+      const fraction = max > min ? (Number(input.value) - min) / (max - min) : 0;
+      input.style.setProperty('--fill', `${Math.min(1, Math.max(0, fraction)) * 100}%`);
+    }
+
+    document.addEventListener('input', event => {
+      if (event.target.matches('input[type="range"]')) syncRange(event.target);
+    });
 
     function showMessage(text) {
-      els.message.textContent = text;
+      els.messageText.textContent = text;
       els.message.hidden = false;
     }
 
     function clearMessage() {
       els.message.hidden = true;
-      els.message.textContent = '';
+      els.messageText.textContent = '';
     }
 
     function isHidden(name) {
@@ -587,6 +1716,27 @@
 
     function trackNamesOf(score) {
       return score.tracks.map((track, index) => track.name || `Ścieżka ${index + 1}`);
+    }
+
+    // Kolor kropki przy nazwie ścieżki (według numeru, żeby każda miała swój)
+    const TRACK_COLORS = ['#2b6cb0', '#e8590c', '#2f9e44', '#9c36b5', '#c2255c', '#0c8599', '#f08c00', '#5f3dc4'];
+
+    // Głośność (%), wyciszenie i solo każdej ścieżki są zapamiętane dla pliku,
+    // więc po wybraniu innego utworu i powrocie wracają razem z nim
+    function mixOf(song, trackIndex) {
+      if (!song.mix.has(trackIndex)) song.mix.set(trackIndex, { volume: 100, muted: false, solo: false });
+      return song.mix.get(trackIndex);
+    }
+
+    // Ścieżka brzmi, gdy jest pokazana i nie jest wyciszona. Jeśli któraś pokazana ma solo,
+    // brzmią tylko pokazane ścieżki z solo
+    function isAudible(song, trackIndex) {
+      if (!song.selected.includes(trackIndex)) return false;
+
+      const soloed = song.selected.filter(i => mixOf(song, i).solo);
+      if (soloed.length > 0 && !mixOf(song, trackIndex).solo) return false;
+
+      return !mixOf(song, trackIndex).muted;
     }
 
     // Zbiera pliki GP z przeciągniętego pliku lub folderu (także z podfolderów)
@@ -619,9 +1769,60 @@
       return entries;
     }
 
-    // Buduje drzewo folderów i plików; wszystkie foldery są domyślnie rozwinięte
+    // Plik z biblioteki ma adres (url), a przeciągnięty lub wybrany plik ma obiekt File
+    async function readSongBytes(song) {
+      if (song.url) {
+        const response = await fetch(song.url);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return response.arrayBuffer();
+      }
+      return song.file.arrayBuffer();
+    }
+
+    // Kodujemy każdy segment osobno, żeby nazwy ze spacjami i nawiasami działały w adresie
+    function libraryUrl(path) {
+      return 'tabs/' + path.split('/').map(encodeURIComponent).join('/');
+    }
+
+    // Na starcie czytamy tylko indeks z tabs.sqlite; same pliki pobieramy po wybraniu utworu
+    async function loadLibrary() {
+      showMessage('Wczytywanie biblioteki…');
+
+      try {
+        const [SQL, response] = await Promise.all([
+          initSqlJs({ locateFile: file => SQL_JS_BASE + file }),
+          fetch(LIBRARY_DB_URL),
+        ]);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+        const db = new SQL.Database(new Uint8Array(await response.arrayBuffer()));
+        try {
+          const rows = db.exec('SELECT path, genre, genre_confidence, year FROM songs ORDER BY path')[0]?.values ?? [];
+          setPlaylist(rows.map(([path, genre, genreConfidence, year]) => ({
+            path,
+            url: libraryUrl(path),
+            genre,
+            genreConfidence,
+            year,
+          })));
+        } finally {
+          db.close();
+        }
+      } catch (error) {
+        showMessage(
+          `Nie udało się wczytać biblioteki (${error.message}). ` +
+          'Uruchom aplikację z serwera i zbuduj indeks: python3 scripts/build-tabs-index.py'
+        );
+      }
+    }
+
+    // Przy dużej bibliotece foldery startują zwinięte, bo rozwinięcie wszystkich zamula przeglądarkę
+    const EXPAND_ALL_LIMIT = 500;
+
+    // Buduje drzewo folderów i plików; małe zestawy mają wszystkie foldery rozwinięte domyślnie
     function buildTree(songs) {
       const root = { type: 'dir', name: '', path: '', children: new Map() };
+      const expandAll = songs.length <= EXPAND_ALL_LIMIT;
 
       songs.forEach((song, index) => {
         const parts = song.path.split('/');
@@ -631,7 +1832,7 @@
           if (!dir.children.has(name)) {
             const path = parts.slice(0, depth + 1).join('/');
             dir.children.set(name, { type: 'dir', name, path, children: new Map() });
-            expandedDirs.add(path);
+            if (expandAll) expandedDirs.add(path);
           }
           dir = dir.children.get(name);
         });
@@ -653,21 +1854,31 @@
         return;
       }
 
-      playlist = files.map(item => ({
-        ...item,
-        name: item.path.split('/').pop().replace(/\.[^.]+$/, ''),
-        selected: [0],
-        trackNames: null,
-        trackError: null,
-        loadingTracks: false,
-      }));
+      playlist = files.map((item, index) => {
+        const meta = songMeta(item.path);
+        return {
+          ...item,
+          index,
+          name: item.path.split('/').pop().replace(/\.[^.]+$/, ''),
+          ...meta,
+          genre: item.genre ?? null,
+          genreConfidence: item.genreConfidence ?? null,
+          year: item.year ?? null,
+          searchText: normalizeText(`${meta.band} ${meta.title}`),
+          searchPath: normalizeText(item.path),
+          selected: [0],
+          mix: new Map(),
+        };
+      });
 
       expandedDirs = new Set();
-      expandedSongs = new Set();
       currentIndex = -1;
       loadedIndex = -1;
       tree = buildTree(playlist);
+      runSearch();
       els.searchInput.disabled = false;
+      populateLibFilters();
+      setView('score');
 
       selectSong(0);
     }
@@ -678,14 +1889,41 @@
       return text.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/ł/gi, 'l').toLowerCase();
     }
 
-    // Szukamy w pełnej ścieżce, więc działa też nazwa folderu
-    function matchesSearch(song) {
-      return !searchQuery || normalizeText(song.path).includes(searchQuery);
+    // Szukamy w pełnej ścieżce, więc działa też nazwa folderu. Ścieżki są już znormalizowane
+    // (song.searchPath), a wyniki liczymy jednym przebiegiem po każdej zmianie zapytania
+    function runSearch() {
+      if (!searchQuery) {
+        searchMatches = null;
+        searchTotal = 0;
+        return;
+      }
+
+      searchMatches = new Uint8Array(playlist.length);
+      searchTotal = 0;
+      playlist.forEach((song, index) => {
+        if (song.searchPath.includes(searchQuery)) {
+          searchMatches[index] = 1;
+          searchTotal += 1;
+        }
+      });
+
+      if (tree) markSearchHits(tree);
     }
 
-    function hasMatch(node) {
-      if (node.type === 'file') return matchesSearch(playlist[node.index]);
-      return [...node.children.values()].some(hasMatch);
+    // Każdy węzeł dostaje flagę hit: czy pod nim jest choć jeden wynik. Pętla nie może się
+    // przerwać na pierwszym trafieniu, bo flagi dzieci są potrzebne przy renderowaniu
+    function markSearchHits(node) {
+      if (node.type === 'file') {
+        node.hit = searchMatches[node.index] === 1;
+        return node.hit;
+      }
+
+      let hit = false;
+      node.children.forEach(child => {
+        if (markSearchHits(child)) hit = true;
+      });
+      node.hit = hit;
+      return hit;
     }
 
     function updateSearchInfo() {
@@ -694,8 +1932,8 @@
         return;
       }
 
-      const count = playlist.filter(matchesSearch).length;
-      els.searchInfo.textContent = `Znaleziono: ${count}`;
+      const shown = searchTotal > SEARCH_RENDER_LIMIT ? `, pokazano ${SEARCH_RENDER_LIMIT}` : '';
+      els.searchInfo.textContent = `Znaleziono: ${searchTotal}${shown}`;
     }
 
     function renderTree() {
@@ -709,12 +1947,13 @@
         return;
       }
 
-      if (searchQuery && !hasMatch(tree)) {
+      if (searchQuery && !tree.hit) {
         const note = document.createElement('p');
         note.className = 'note';
         note.textContent = `Brak wyników dla „${els.searchInput.value.trim()}”`;
         els.tree.append(note);
       } else {
+        renderBudget = searchQuery ? SEARCH_RENDER_LIMIT : Infinity;
         els.tree.append(renderChildren(tree, false));
       }
 
@@ -737,9 +1976,12 @@
       if (nested) ul.className = 'children';
 
       [...dir.children.values()]
-        .filter(node => !searchQuery || hasMatch(node))
+        .filter(node => !searchQuery || node.hit)
         .sort(compareNodes)
-        .forEach(node => ul.append(node.type === 'dir' ? renderDir(node) : renderFile(node)));
+        .forEach(node => {
+          if (renderBudget <= 0) return;
+          ul.append(node.type === 'dir' ? renderDir(node) : renderFile(node));
+        });
 
       return ul;
     }
@@ -758,86 +2000,149 @@
     }
 
     function renderFile(node) {
+      renderBudget -= 1;
       const li = document.createElement('li');
       const song = playlist[node.index];
-      const expanded = expandedSongs.has(node.index);
 
       li.className = node.index === currentIndex ? 'file current' : 'file';
+      // Plik nie ma rozwijania: ścieżki są w panelu obok partytury
       li.append(createRow(
-        expanded,
+        null,
         node.name,
         song.path,
-        () => toggleSong(node.index),
-        () => selectSong(node.index),
+        null,
+        () => {
+          setView('score');
+          selectSong(node.index);
+        },
       ));
-      if (expanded) li.append(renderTrackList(node.index));
 
       return li;
     }
 
+    // Foldery mają strzałkę do rozwijania, pliki dostają puste miejsce o tej samej szerokości
     function createRow(expanded, label, title, onCaret, onLabel) {
       const row = document.createElement('div');
-      const caret = document.createElement('button');
       const button = document.createElement('button');
 
       row.className = 'row';
 
-      caret.type = 'button';
-      caret.className = 'caret';
-      caret.textContent = expanded ? '▾' : '▸';
-      caret.setAttribute('aria-expanded', String(expanded));
-      caret.addEventListener('click', onCaret);
+      if (onCaret) {
+        const caret = document.createElement('button');
+        caret.type = 'button';
+        caret.className = 'caret';
+        caret.innerHTML = iconMarkup('chevron-right');
+        caret.setAttribute('aria-expanded', String(expanded));
+        caret.addEventListener('click', onCaret);
+        row.append(caret);
+      } else {
+        const spacer = document.createElement('span');
+        spacer.className = 'caret-spacer';
+        row.append(spacer);
+      }
 
       button.type = 'button';
       button.className = 'label';
-      button.textContent = label;
+      const text = document.createElement('span');
+      text.className = 'label-text';
+      text.textContent = label;
+      button.insertAdjacentHTML('afterbegin', iconMarkup(onCaret ? 'folder' : 'music'));
+      button.append(text);
       button.title = title;
       button.addEventListener('click', onLabel);
 
-      row.append(caret, button);
+      row.append(button);
       return row;
     }
 
-    function noteItem(text) {
-      const li = document.createElement('li');
-      li.className = 'note';
-      li.textContent = text;
-      return li;
+    // Panel ścieżek pokazuje tylko utwór wyświetlony w partyturze, bo tylko on brzmi i tylko on się drukuje
+    function renderTrackPanel() {
+      const song = loadedIndex >= 0 ? playlist[loadedIndex] : null;
+      // Panel ścieżek jest dostępny też w bibliotece, bo sterowanie ścieżkami nie wymaga partytury na ekranie
+      const visible = Boolean(song && api.score && trackPanelOpen);
+
+      els.trackPanel.hidden = !visible;
+      if (!visible) return;
+
+      const names = trackNamesOf(api.score);
+      els.trackPanelInfo.textContent = `Pokazane w partyturze: ${song.selected.length} z ${names.length}`;
+      els.trackList.replaceChildren(...names.map((name, trackIndex) => createTrackItem(song, trackIndex, name)));
     }
 
-    function renderTrackList(index) {
-      const song = playlist[index];
-      const ul = document.createElement('ul');
-      ul.className = 'tracks';
+    function createTrackItem(song, trackIndex, name) {
+      const mix = mixOf(song, trackIndex);
+      const shown = song.selected.includes(trackIndex);
+      const li = document.createElement('li');
+      const head = document.createElement('label');
+      const checkbox = document.createElement('input');
+      const swatch = document.createElement('span');
+      const text = document.createElement('span');
+      const mixRow = document.createElement('div');
+      const muteBtn = document.createElement('button');
+      const soloBtn = document.createElement('button');
+      const volume = document.createElement('input');
+      const volumeValue = document.createElement('span');
 
-      if (song.trackError) {
-        ul.append(noteItem(`Nie udało się odczytać ścieżek: ${song.trackError}`));
-        return ul;
-      }
+      li.className = shown ? 'track' : 'track is-hidden';
 
-      if (!song.trackNames) {
-        ul.append(noteItem('Wczytywanie ścieżek…'));
-        return ul;
-      }
+      // Pokazanie ścieżki w partyturze
+      head.className = 'track-head';
+      head.title = name;
+      checkbox.type = 'checkbox';
+      checkbox.checked = shown;
+      checkbox.addEventListener('change', () => toggleTrack(trackIndex, checkbox));
+      swatch.className = 'track-swatch';
+      swatch.style.background = TRACK_COLORS[trackIndex % TRACK_COLORS.length];
+      text.className = 'track-name';
+      text.textContent = name;
+      head.append(checkbox, swatch, text);
 
-      song.trackNames.forEach((name, trackIndex) => {
-        const li = document.createElement('li');
-        const label = document.createElement('label');
-        const checkbox = document.createElement('input');
-        const text = document.createElement('span');
-
-        li.className = 'track';
-        checkbox.type = 'checkbox';
-        checkbox.checked = song.selected.includes(trackIndex);
-        checkbox.addEventListener('change', () => toggleTrack(index, trackIndex, checkbox));
-        text.textContent = name;
-
-        label.append(checkbox, text);
-        li.append(label);
-        ul.append(li);
+      // Wyciszenie i solo; zmiana od razu przestawia brzmienie, bez przerysowania listy
+      mixRow.className = 'track-mix';
+      muteBtn.type = 'button';
+      muteBtn.className = 'mute';
+      muteBtn.textContent = 'M';
+      muteBtn.title = 'Wycisz ścieżkę';
+      muteBtn.setAttribute('aria-label', `Wycisz: ${name}`);
+      muteBtn.setAttribute('aria-pressed', String(mix.muted));
+      muteBtn.addEventListener('click', () => {
+        mix.muted = !mix.muted;
+        renderTrackPanel();
+        syncPlayback();
       });
 
-      return ul;
+      soloBtn.type = 'button';
+      soloBtn.className = 'solo';
+      soloBtn.textContent = 'S';
+      soloBtn.title = 'Solo: słychać tylko ścieżki z solo';
+      soloBtn.setAttribute('aria-label', `Solo: ${name}`);
+      soloBtn.setAttribute('aria-pressed', String(mix.solo));
+      soloBtn.addEventListener('click', () => {
+        mix.solo = !mix.solo;
+        renderTrackPanel();
+        syncPlayback();
+      });
+
+      // Suwak zmienia głośność w trakcie przeciągania, więc tu nie przerysowujemy listy
+      volume.type = 'range';
+      volume.className = 'track-volume';
+      volume.min = '0';
+      volume.max = '200';
+      volume.step = '5';
+      volume.value = String(mix.volume);
+      volume.setAttribute('aria-label', `Głośność: ${name}`);
+      volumeValue.className = 'track-vol-value';
+      volumeValue.textContent = `${mix.volume}%`;
+      syncRange(volume);
+      volume.addEventListener('input', () => {
+        mix.volume = Number(volume.value);
+        volumeValue.textContent = `${mix.volume}%`;
+        syncPlayback();
+      });
+
+      mixRow.append(muteBtn, soloBtn, volume, volumeValue);
+      li.append(head, mixRow);
+      return li;
     }
 
     function toggleDir(path) {
@@ -847,37 +2152,9 @@
       renderTree();
     }
 
-    async function toggleSong(index) {
-      if (expandedSongs.has(index)) {
-        expandedSongs.delete(index);
-        renderTree();
-        return;
-      }
-
-      expandedSongs.add(index);
-      renderTree();
-      await loadTrackNames(index);
-    }
-
-    // Odczytuje nazwy ścieżek bez renderowania nut (dla plików, które nie są wyświetlone)
-    async function loadTrackNames(index) {
-      const song = playlist[index];
-      if (song.trackNames || song.trackError || song.loadingTracks) return;
-
-      song.loadingTracks = true;
-      try {
-        const data = new Uint8Array(await song.file.arrayBuffer());
-        song.trackNames = trackNamesOf(alphaTab.importer.ScoreLoader.loadScoreFromBytes(data));
-      } catch (error) {
-        song.trackError = error.message;
-      } finally {
-        song.loadingTracks = false;
-        renderTree();
-      }
-    }
-
-    function toggleTrack(index, trackIndex, checkbox) {
-      const song = playlist[index];
+    // Zaznaczenie ścieżki pokazuje ją w partyturze; panel dotyczy tylko wyświetlonego utworu
+    function toggleTrack(trackIndex, checkbox) {
+      const song = playlist[loadedIndex];
       const selected = new Set(song.selected);
 
       if (checkbox.checked) selected.add(trackIndex);
@@ -890,13 +2167,10 @@
       }
 
       song.selected = [...selected].sort((a, b) => a - b);
-
-      if (index === loadedIndex) {
-        api.renderTracks(song.selected.map(i => api.score.tracks[i]));
-        syncPlayback();
-      } else {
-        selectSong(index);
-      }
+      // Przygaszenie ukrytych ścieżek w panelu musi się zmienić od razu
+      renderTrackPanel();
+      api.renderTracks(song.selected.map(i => api.score.tracks[i]));
+      syncPlayback();
     }
 
     async function selectSong(index) {
@@ -907,13 +2181,16 @@
       const token = ++loadToken;
 
       currentIndex = index;
-      expandedSongs.add(index);
+      // Foldery prowadzące do wybranego utworu są rozwinięte, żeby był widoczny w drzewie
+      const folders = song.path.split('/').slice(0, -1);
+      folders.forEach((_, depth) => expandedDirs.add(folders.slice(0, depth + 1).join('/')));
       renderTree();
       clearMessage();
       els.songInfo.textContent = song.name;
+      els.footerSong.textContent = [song.band, song.title].filter(Boolean).join(' – ');
 
       try {
-        const data = await song.file.arrayBuffer();
+        const data = await readSongBytes(song);
         if (token === loadToken) api.load(data, [...song.selected]);
       } catch (error) {
         if (token === loadToken) showMessage(`Nie udało się wczytać pliku „${song.name}”: ${error.message}`);
@@ -921,33 +2198,34 @@
     }
 
     api.scoreLoaded.on(score => {
-      const song = playlist[currentIndex];
       const name = [score.artist, score.title].filter(Boolean).join(' – ');
 
       loadedIndex = currentIndex;
-      if (song) {
-        song.trackNames = trackNamesOf(score);
-        song.trackError = null;
-      }
 
       applyDisplayMode(score, false);
       syncPlayback();
+      schedulePendingPlayback();
+      updateLibraryPlayback();
       els.songInfo.textContent = name || 'Bez tytułu';
       els.placeholder.hidden = true;
       els.score.hidden = false;
       els.printBtn.disabled = false;
+      els.trackPanelBtn.disabled = false;
       clearMessage();
       renderTree();
+      renderTrackPanel();
     });
 
     api.error.on(error => {
       const song = playlist[currentIndex];
 
       loadedIndex = -1;
-      if (song && !song.trackNames) song.trackError = error.message;
+      playWhenReady = false;
+      updateLibraryPlayback();
 
       showMessage(`Nie udało się wczytać pliku „${song ? song.name : ''}”: ${error.message}`);
       renderTree();
+      renderTrackPanel();
     });
 
     function formatTime(ms) {
@@ -955,7 +2233,8 @@
       return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
     }
 
-    // Odtwarza tylko ścieżki widoczne w podglądzie: pozostałe wyciszamy
+    // Odtwarza tylko ścieżki widoczne w podglądzie (i nie wyciszone; przy solo tylko te z solo),
+    // z ustawioną dla każdej głośnością
     function syncPlayback() {
       const song = playlist[loadedIndex];
       const ready = api.isReadyForPlayback;
@@ -966,7 +2245,8 @@
       if (!ready || !song || !api.score) return;
 
       api.score.tracks.forEach((track, index) => {
-        api.changeTrackMute([track], !song.selected.includes(index));
+        api.changeTrackVolume([track], mixOf(song, index).volume / 100);
+        api.changeTrackMute([track], !isAudible(song, index));
       });
     }
 
@@ -974,6 +2254,8 @@
     api.playerReady.on(() => {
       els.playStatus.textContent = '';
       syncPlayback();
+      schedulePendingPlayback();
+      updateLibraryPlayback();
     });
     api.soundFontLoad.on(progress => {
       if (progress.total > 0) {
@@ -983,8 +2265,10 @@
 
     api.playerStateChanged.on(args => {
       const playing = args.state === alphaTab.synth.PlayerState.Playing;
-      els.playBtn.textContent = playing ? '❚❚' : '▶';
+      setIcon(els.playBtn, playing ? 'pause' : 'play');
       els.playBtn.setAttribute('aria-label', playing ? 'Pauza' : 'Odtwórz');
+      isPlaying = playing;
+      updateLibraryPlayback();
       if (args.stopped) showNowPlaying([]);
     });
 
@@ -1016,20 +2300,32 @@
       });
 
       els.nowPlaying.textContent = parts.length ? parts.join(' · ') : '—';
+      els.libMiniNotes.textContent = parts.join(' · ');
     }
 
     api.activeBeatsChanged.on(args => showNowPlaying(args.activeBeats));
 
     api.playerPositionChanged.on(args => {
       duration = args.endTime;
-      if (!seeking) els.seekBar.value = args.endTime ? Math.round(args.currentTime / args.endTime * 1000) : 0;
+      if (!seeking) {
+        els.seekBar.value = args.endTime ? Math.round(args.currentTime / args.endTime * 1000) : 0;
+        syncRange(els.seekBar);
+      }
       els.timeInfo.textContent = `${formatTime(args.currentTime)} / ${formatTime(args.endTime)}`;
     });
 
     els.playBtn.addEventListener('click', () => api.playPause());
+    els.libMiniPlay.addEventListener('click', () => api.playPause());
+    els.libMiniStop.addEventListener('click', () => {
+      playWhenReady = false;
+      api.stop();
+    });
     els.stopBtn.addEventListener('click', () => api.stop());
     els.speedSelect.addEventListener('change', () => {
       api.playbackSpeed = Number(els.speedSelect.value);
+    });
+    els.masterVolume.addEventListener('input', () => {
+      api.masterVolume = Number(els.masterVolume.value) / 100;
     });
     els.seekBar.addEventListener('input', () => {
       seeking = true;
@@ -1051,6 +2347,7 @@
 
     els.searchInput.addEventListener('input', () => {
       searchQuery = normalizeText(els.searchInput.value.trim());
+      runSearch();
       renderTree();
     });
 
@@ -1058,18 +2355,58 @@
       if (event.key === 'Escape') {
         els.searchInput.value = '';
         searchQuery = '';
+        runSearch();
         renderTree();
       }
 
       // Enter otwiera pierwszy pasujący plik
       if (event.key === 'Enter' && searchQuery) {
-        const first = playlist.findIndex(song => matchesSearch(song));
-        if (first >= 0) selectSong(first);
+        const first = searchMatches.indexOf(1);
+        if (first >= 0) {
+          setView('score');
+          selectSong(first);
+        }
       }
     });
 
     els.openFileBtn.addEventListener('click', () => els.fileInput.click());
     els.openFolderBtn.addEventListener('click', () => els.folderInput.click());
+
+    // Menu „Otwórz” (DropdownMenu): zamyka się po wyborze, kliknięciu poza nim i klawiszem Escape
+    const openMenuBtn = document.getElementById('openMenuBtn');
+    const openMenuContent = document.getElementById('openMenuContent');
+
+    function setOpenMenu(open, focusFirst = false) {
+      openMenuContent.hidden = !open;
+      openMenuBtn.setAttribute('aria-expanded', String(open));
+      if (open && focusFirst) openMenuContent.querySelector('button').focus();
+    }
+
+    openMenuBtn.addEventListener('click', () => setOpenMenu(openMenuContent.hidden));
+    openMenuBtn.addEventListener('keydown', event => {
+      if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        setOpenMenu(true, true);
+      }
+    });
+    openMenuContent.addEventListener('click', () => setOpenMenu(false));
+    openMenuContent.addEventListener('keydown', event => {
+      const items = [...openMenuContent.querySelectorAll('button')];
+      const at = items.indexOf(document.activeElement);
+
+      if (event.key === 'ArrowDown') items[(at + 1) % items.length].focus();
+      else if (event.key === 'ArrowUp') items[(at - 1 + items.length) % items.length].focus();
+      else if (event.key === 'Escape' || event.key === 'Tab') {
+        setOpenMenu(false);
+        if (event.key === 'Escape') openMenuBtn.focus();
+        return;
+      } else return;
+
+      event.preventDefault();
+    });
+    document.addEventListener('click', event => {
+      if (!event.target.closest('.menu')) setOpenMenu(false);
+    });
     els.fileInput.addEventListener('change', () => handleInput(els.fileInput));
     els.folderInput.addEventListener('change', () => handleInput(els.folderInput));
 
@@ -1100,6 +2437,8 @@
 
     document.addEventListener('keydown', event => {
       if (event.target.matches?.('input, select, textarea')) return;
+      // W bibliotece strzałki poruszają się po tabeli, a nie po utworach
+      if (viewMode === 'library') return;
       if (event.key === 'ArrowLeft') selectSong(currentIndex - 1);
       if (event.key === 'ArrowRight') selectSong(currentIndex + 1);
     });
@@ -1136,6 +2475,13 @@
 
     els.printBtn.addEventListener('click', printScore);
 
+    els.trackPanelBtn.setAttribute('aria-pressed', String(trackPanelOpen));
+    els.trackPanelBtn.addEventListener('click', () => {
+      trackPanelOpen = !trackPanelOpen;
+      els.trackPanelBtn.setAttribute('aria-pressed', String(trackPanelOpen));
+      renderTrackPanel();
+    });
+
     document.addEventListener('dragover', event => event.preventDefault());
     document.addEventListener('drop', async event => {
       event.preventDefault();
@@ -1148,6 +2494,334 @@
 
       setPlaylist(found);
     });
+
+    // ---- Biblioteka: tabela z sortowaniem i filtrami, które można łączyć ----
+    // Zespół, tytuł, kolekcja i format wynikają ze ścieżki (tak jak w scripts/build-tabs-index.py),
+    // gatunek i rok przychodzą z indeksu
+    function songMeta(path) {
+      const parts = path.split('/');
+      const fileName = parts[parts.length - 1];
+      const stem = fileName.replace(/\.[^.]+$/, '');
+      const match = /^(.*?) - (.*)$/.exec(stem);
+      const ext = fileName.match(/\.([^.]+)$/);
+
+      return {
+        collection: parts.length > 1 ? parts[0] : '',
+        band: parts.length === 4 ? parts[2] : match ? match[1] : '',
+        title: match ? match[2] : stem,
+        format: ext ? ext[1].toUpperCase() : '',
+      };
+    }
+
+    let viewMode = 'score';
+    const libState = { key: 'band', dir: 1, page: 0 };
+    const LIB_PAGE_SIZE = 200;
+    const NO_GENRE = '__none';
+    const CONFIDENCE_LABEL = { high: 'wysoka', medium: 'średnia', low: 'niska' };
+    // Porównanie tekstu z polskimi znakami i liczbami w nazwie (np. „Part 2” przed „Part 10”)
+    const collator = new Intl.Collator('pl', { numeric: true, sensitivity: 'base' });
+
+    function setView(mode) {
+      viewMode = mode;
+      els.viewer.classList.toggle('library-mode', mode === 'library');
+      els.library.hidden = mode !== 'library';
+      els.viewButtons.forEach(button => {
+        button.setAttribute('aria-pressed', String(button.dataset.view === mode));
+      });
+      if (mode === 'library') renderLibrary();
+      renderTrackPanel();
+    }
+
+    // Przycisk „Foldery” tylko pokazuje albo chowa panel boczny, tak jak „Ścieżki” chowa panel ścieżek.
+    // Nie zmienia widoku, więc biblioteka i partytura zostają takie, jakie były
+    function renderFoldersPanel() {
+      els.sidebar.hidden = !foldersOpen;
+      els.foldersToggle.setAttribute('aria-pressed', String(foldersOpen));
+    }
+
+    renderFoldersPanel();
+    els.foldersToggle.addEventListener('click', () => {
+      foldersOpen = !foldersOpen;
+      renderFoldersPanel();
+    });
+
+    // Motyw: domyślnie jasny; przełącznik zapamiętuje wybór w localStorage (jeśli dostępny)
+    const THEME_KEY = 'gp-viewer-theme';
+
+    function setTheme(dark) {
+      document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+      setIcon(els.themeToggle, dark ? 'sun' : 'moon');
+    }
+
+    setTheme(document.documentElement.dataset.theme === 'dark');
+    els.themeToggle.addEventListener('click', () => {
+      const dark = document.documentElement.dataset.theme !== 'dark';
+      setTheme(dark);
+      try {
+        localStorage.setItem(THEME_KEY, dark ? 'dark' : 'light');
+      } catch (error) {
+        // Bez localStorage przełącznik działa, tylko nie zapamięta wyboru
+      }
+    });
+
+    function fillSelect(select, allLabel, options) {
+      const previous = select.value;
+      const items = [new Option(allLabel, '')];
+      options.forEach(([value, label]) => items.push(new Option(label, value)));
+      select.replaceChildren(...items);
+      select.value = options.some(([value]) => value === previous) ? previous : '';
+    }
+
+    function populateLibFilters() {
+      const genres = [...new Set(playlist.map(song => song.genre).filter(Boolean))].sort(collator.compare);
+      const collections = [...new Set(playlist.map(song => song.collection).filter(Boolean))].sort(collator.compare);
+
+      fillSelect(els.libGenre, 'Wszystkie gatunki', [
+        ...genres.map(genre => [genre, genre]),
+        [NO_GENRE, 'Bez gatunku'],
+      ]);
+      fillSelect(els.libCollection, 'Wszystkie kolekcje', collections.map(name => [name, name]));
+    }
+
+    function readLibFilters() {
+      return {
+        query: normalizeText(els.libSearch.value.trim()),
+        genre: els.libGenre.value,
+        format: els.libFormat.value,
+        collection: els.libCollection.value,
+        from: els.libYearFrom.value === '' ? null : Number(els.libYearFrom.value),
+        to: els.libYearTo.value === '' ? null : Number(els.libYearTo.value),
+        sureOnly: els.libSureGenre.checked,
+      };
+    }
+
+    // Każdy filtr zawęża wynik, więc można łączyć kilka wymiarów naraz
+    function matchesLibrary(song, f) {
+      if (f.query && !song.searchText.includes(f.query)) return false;
+      if (f.genre === NO_GENRE && song.genre) return false;
+      if (f.genre && f.genre !== NO_GENRE && song.genre !== f.genre) return false;
+      if (f.format && song.format !== f.format) return false;
+      if (f.collection && song.collection !== f.collection) return false;
+      if (f.from !== null && (song.year === null || song.year < f.from)) return false;
+      if (f.to !== null && (song.year === null || song.year > f.to)) return false;
+      if (f.sureOnly && (!song.genre || song.genreConfidence === 'low')) return false;
+      return true;
+    }
+
+    // Brakujące wartości zawsze na końcu, niezależnie od kierunku sortowania
+    function compareSongs(a, b) {
+      const { key, dir } = libState;
+      const av = a[key];
+      const bv = b[key];
+      const aEmpty = av === null || av === undefined || av === '';
+      const bEmpty = bv === null || bv === undefined || bv === '';
+      if (aEmpty || bEmpty) return aEmpty === bEmpty ? 0 : aEmpty ? 1 : -1;
+
+      const base = typeof av === 'number' ? av - bv : collator.compare(av, bv);
+      if (base !== 0) return base * dir;
+      return collator.compare(a.band, b.band) || collator.compare(a.title, b.title) || a.index - b.index;
+    }
+
+    function openFromLibrary(index) {
+      setView('score');
+      selectSong(index);
+    }
+
+    // Odtwarzanie z biblioteki: ten sam utwór przełącza pauzę, inny najpierw się wczytuje, a potem gra
+    function playFromLibrary(index) {
+      if (index === loadedIndex) {
+        api.playPause();
+        return;
+      }
+
+      playWhenReady = true;
+      selectSong(index);
+    }
+
+    function startPendingPlayback() {
+      if (!playWhenReady || loadedIndex < 0 || !api.isReadyForPlayback) return;
+
+      playWhenReady = false;
+      api.play();
+    }
+
+    // alphaTab po wczytaniu utworu może jeszcze raz przeładować MIDI i zatrzymać grę, więc
+    // czekamy, aż zdarzenia się uspokoją, zanim zaczniemy odtwarzanie
+    let pendingPlayTimer = 0;
+
+    function schedulePendingPlayback() {
+      if (!playWhenReady) return;
+
+      clearTimeout(pendingPlayTimer);
+      pendingPlayTimer = setTimeout(startPendingPlayback, 400);
+    }
+
+    api.midiLoad.on(schedulePendingPlayback);
+
+    // Odświeża przyciski w wierszach i mini odtwarzacz według tego, co jest wczytane i czy gra
+    function updateLibraryPlayback() {
+      const loaded = loadedIndex >= 0 ? playlist[loadedIndex] : null;
+      const ready = api.isReadyForPlayback;
+
+      els.libMini.hidden = !loaded;
+      els.libMiniTitle.textContent = loaded ? [loaded.band, loaded.title].filter(Boolean).join(' – ') : '';
+      setIcon(els.libMiniPlay, isPlaying ? 'pause' : 'play');
+      els.libMiniPlay.setAttribute('aria-label', isPlaying ? 'Pauza' : 'Odtwórz');
+      els.libMiniPlay.disabled = !ready;
+
+      els.libBody.querySelectorAll('button.lib-play').forEach(button => {
+        const active = Number(button.dataset.index) === loadedIndex;
+        const playing = active && isPlaying;
+
+        setIcon(button, playing ? 'pause' : 'play');
+        button.setAttribute('aria-label', `${playing ? 'Pauza' : 'Odtwórz'}: ${button.dataset.label}`);
+        button.classList.toggle('is-current', active);
+      });
+    }
+
+    function songRow(song) {
+      const cell = text => {
+        const td = document.createElement('td');
+        td.textContent = text;
+        return td;
+      };
+
+      const genre = cell(song.genre ?? '—');
+      if (song.genreConfidence) genre.title = `Pewność gatunku: ${CONFIDENCE_LABEL[song.genreConfidence]}`;
+      if (song.genreConfidence === 'low') genre.className = 'lib-low';
+
+      // Przycisk odtwarzania nie otwiera partytury, dlatego zatrzymujemy zdarzenia przed wierszem
+      const playCell = () => {
+        const td = document.createElement('td');
+        const button = document.createElement('button');
+        const label = [song.band, song.title].filter(Boolean).join(' – ');
+
+        td.className = 'lib-play-cell';
+        button.type = 'button';
+        button.className = 'lib-play icon-btn sm';
+        button.dataset.index = song.index;
+        button.dataset.label = label;
+        button.innerHTML = iconMarkup('play', true);
+        button.setAttribute('aria-label', `Odtwórz: ${label}`);
+        button.addEventListener('click', event => {
+          event.stopPropagation();
+          playFromLibrary(song.index);
+        });
+        button.addEventListener('keydown', event => event.stopPropagation());
+        td.append(button);
+        return td;
+      };
+
+      // Format jako Badge (outline)
+      const formatCell = format => {
+        const td = document.createElement('td');
+        if (format) {
+          const badge = document.createElement('span');
+          badge.className = 'badge';
+          badge.textContent = format;
+          td.append(badge);
+        } else {
+          td.textContent = '—';
+        }
+        return td;
+      };
+
+      const tr = document.createElement('tr');
+      tr.tabIndex = 0;
+      if (song.index === currentIndex) tr.className = 'current';
+      tr.append(
+        playCell(),
+        cell(song.band || '—'),
+        cell(song.title),
+        genre,
+        cell(song.year ?? '—'),
+        cell(song.collection || '—'),
+        formatCell(song.format),
+      );
+
+      tr.addEventListener('click', () => openFromLibrary(song.index));
+      tr.addEventListener('keydown', event => {
+        if (event.key === 'Enter') openFromLibrary(song.index);
+      });
+      return tr;
+    }
+
+    function renderLibrary() {
+      const filters = readLibFilters();
+      const rows = playlist.filter(song => matchesLibrary(song, filters)).sort(compareSongs);
+      const pages = Math.max(1, Math.ceil(rows.length / LIB_PAGE_SIZE));
+      libState.page = Math.min(libState.page, pages - 1);
+      const start = libState.page * LIB_PAGE_SIZE;
+
+      els.libBody.replaceChildren(...rows.slice(start, start + LIB_PAGE_SIZE).map(songRow));
+      els.libCount.textContent = `Znaleziono: ${rows.length} z ${playlist.length}`;
+      els.libPage.textContent = `Strona ${libState.page + 1} z ${pages}`;
+      els.libPrev.disabled = libState.page === 0;
+      els.libNext.disabled = libState.page >= pages - 1;
+      updateLibraryPlayback();
+
+      document.querySelectorAll('.lib-table th').forEach(th => {
+        const button = th.querySelector('button.sort');
+        if (!button) return;
+        const active = button.dataset.key === libState.key;
+        th.setAttribute('aria-sort', active ? (libState.dir === 1 ? 'ascending' : 'descending') : 'none');
+        setIcon(button, active ? (libState.dir === 1 ? 'arrow-up' : 'arrow-down') : 'arrow-up-down');
+      });
+    }
+
+    els.viewButtons.forEach(button => {
+      button.addEventListener('click', () => setView(button.dataset.view));
+    });
+
+    document.querySelectorAll('.lib-table th button.sort').forEach(button => {
+      button.addEventListener('click', () => {
+        const key = button.dataset.key;
+        libState.dir = libState.key === key ? -libState.dir : 1;
+        libState.key = key;
+        libState.page = 0;
+        renderLibrary();
+      });
+    });
+
+    [els.libSearch, els.libYearFrom, els.libYearTo].forEach(control => {
+      control.addEventListener('input', () => {
+        libState.page = 0;
+        renderLibrary();
+      });
+    });
+
+    [els.libGenre, els.libFormat, els.libCollection, els.libSureGenre].forEach(control => {
+      control.addEventListener('change', () => {
+        libState.page = 0;
+        renderLibrary();
+      });
+    });
+
+    els.libReset.addEventListener('click', () => {
+      els.libSearch.value = '';
+      els.libGenre.value = '';
+      els.libFormat.value = '';
+      els.libCollection.value = '';
+      els.libYearFrom.value = '';
+      els.libYearTo.value = '';
+      els.libSureGenre.checked = false;
+      libState.page = 0;
+      renderLibrary();
+    });
+
+    els.libPrev.addEventListener('click', () => {
+      libState.page -= 1;
+      renderLibrary();
+    });
+
+    els.libNext.addEventListener('click', () => {
+      libState.page += 1;
+      renderLibrary();
+    });
+
+    document.querySelectorAll('input[type="range"]').forEach(syncRange);
+
+    loadLibrary();
   </script>
 </body>
 </html>
